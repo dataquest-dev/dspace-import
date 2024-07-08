@@ -161,7 +161,7 @@ class differ:
         self.raw_db_7 = raw_db_7
 
     def _fetch_all_vals(self, db5, table_name: str, sql: str = None):
-        sql = sql = f"SELECT * FROM {table_name}" if sql is None else sql
+        sql = sql or f"SELECT * FROM {table_name}"
         cols5 = []
         db5 = db5 or self.raw_db_dspace_5
         vals5 = db5.fetch_all(sql, col_names=cols5)
@@ -213,8 +213,13 @@ class differ:
 
     def diff_table_cmp_len(self, db5, table_name: str, nonnull: list = None, gdpr: bool = True, sql: str = None):
         nonnull = nonnull or []
-        cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name, sql)
+        sql_info = False
+        cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name)
         do_not_show = gdpr and "email" in nonnull
+
+        if len(vals5) != len(vals7) and sql is not None:
+            cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name, sql)
+            sql_info = True
 
         msg = " OK " if len(vals5) == len(vals7) else " !!! WARN !!! "
         _logger.info(
@@ -229,7 +234,8 @@ class differ:
             msg = " OK " if len(vals5_cmp) == len(vals7_cmp) else " !!! WARN !!! "
             _logger.info(
                 f"Table [{table_name: >20}] {msg}  NON NULL [{col_name:>15}] v5:[{len(vals5_cmp):3}], v7:[{len(vals7_cmp):3}]")
-        if sql is not None:
+
+        if sql_info:
             _logger.info(
                 f"Table [{table_name: >20}]  !!! WARN !!!  SQL request: {sql}")
 
