@@ -15,7 +15,7 @@ def init_logging(
     os.makedirs(base_log_dir, exist_ok=True)
 
     formatter = logging.Formatter(format)
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(log_file, 'w', 'utf-8')
     file_handler.setFormatter(formatter)
     file_handler.setLevel(file_level)
     logger.addHandler(file_handler)
