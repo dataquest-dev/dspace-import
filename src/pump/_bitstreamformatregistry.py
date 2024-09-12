@@ -107,7 +107,7 @@ class bitstreamformatregistry:
                 # check file extensions
                 old_ext = old_bfr2ext[bf_id]
                 new_ext = existing_bfr2ext[ext_id]
-                if len(list(set(old_ext).difference(new_ext))) > 0:
+                if set(old_ext) != set(new_ext):
                     _logger.warning(
                         f'Fileextensions for bitstreamformatregistry [{bf["short_description"]}] do not match! '
                         f'Old extensions: {[str(f) for f in old_ext]} New extensions: {[str(f) for f in new_ext]}')
