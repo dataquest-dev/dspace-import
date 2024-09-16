@@ -80,7 +80,7 @@ class repo:
         )
 
         self.bitstreamformatregistry = bitstreamformatregistry(
-            _f("bitstreamformatregistry.json")
+            _f("bitstreamformatregistry.json"), _f("fileextension.json")
         )
 
         self.licenses = licenses(

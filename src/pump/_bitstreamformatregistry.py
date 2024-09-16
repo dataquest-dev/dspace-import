@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from ._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.bitstreamformatregistry")
@@ -14,12 +15,17 @@ class bitstreamformatregistry:
             "compare": ["mimetype", "short_description", "support_level"],
         }],
         ["fileextension", {
-            "compare": ["extension"],
+            "sql": {
+                "5": "select bitstreamformatregistry.short_description, fileextension.extension from fileextension inner join bitstreamformatregistry ON fileextension.bitstream_format_id=bitstreamformatregistry.bitstream_format_id",
+                "7": "select bitstreamformatregistry.short_description, fileextension.extension from fileextension inner join bitstreamformatregistry ON fileextension.bitstream_format_id=bitstreamformatregistry.bitstream_format_id",
+                "compare": None,
+            }
         }],
     ]
 
-    def __init__(self, bfr_file_str: str):
+    def __init__(self, bfr_file_str: str, fe_file_str: str):
         self._reg = read_json(bfr_file_str)
+        self._fe = read_json(fe_file_str)
         self._imported = {
             "reg": 0,
             "existed": 0,
@@ -65,12 +71,18 @@ class bitstreamformatregistry:
         log_before_import(log_key, expected)
 
         existing_bfr2id = {}
+        existing_bfr2ext = defaultdict(list)
         bfr_js = dspace.fetch_bitstreamregistry()
         if bfr_js is not None:
             for bf in bfr_js:
                 existing_bfr2id[bf['shortDescription']] = bf['id']
                 if bf['description'] == 'Unknown data format':
                     self._unknown_format_id = bf['id']
+                existing_bfr2ext[bf['id']] = bf['extensions']
+
+        old_bfr2ext = defaultdict(list)
+        for fe in self._fe:
+            old_bfr2ext[fe['bitstream_format_id']].append(fe['extension'])
 
         map = {
             0: 'UNKNOWN',
@@ -88,18 +100,25 @@ class bitstreamformatregistry:
 
             bf_id = bf['bitstream_format_id']
             ext_id = existing_bfr2id.get(bf['short_description'], None)
-
             if ext_id is not None:
                 self._imported["existed"] += 1
                 _logger.debug(
                     f'Bitstreamformatregistry [{bf["short_description"]}] already exists!')
+                # check file extensions
+                old_ext = old_bfr2ext[bf_id]
+                new_ext = existing_bfr2ext[ext_id]
+                if set(old_ext) != set(new_ext):
+                    _logger.warning(
+                        f'Fileextensions for bitstreamformatregistry [{bf["short_description"]}] do not match! '
+                        f'Old extensions: {[str(f) for f in old_ext]} New extensions: {[str(f) for f in new_ext]}')
             else:
                 data = {
                     'mimetype': bf['mimetype'],
                     'description': bf['description'],
                     'shortDescription': bf['short_description'],
                     'supportLevel': level_str,
-                    'internal': bf['internal']
+                    'internal': bf['internal'],
+                    'extensions': old_bfr2ext[bf_id]
                 }
                 try:
                     resp = dspace.put_bitstreamregistry(data)
@@ -124,6 +143,7 @@ class bitstreamformatregistry:
             "imported": self._imported,
             "unknown_format_id": self._unknown_format_id,
             "id2mimetype": self._id2mimetype,
+            "fe": self._fe
         }
         serialize(file_str, data)
 
@@ -134,3 +154,4 @@ class bitstreamformatregistry:
         self._imported = data["imported"]
         self._unknown_format_id = data["unknown_format_id"]
         self._id2mimetype = data["id2mimetype"]
+        self._fe = data["fe"]
