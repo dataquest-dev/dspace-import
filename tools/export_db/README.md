@@ -1,0 +1,1 @@
+Obsolete now because we need a running v5 database anyway.
