@@ -1,5 +1,7 @@
 import logging
 import os
+import json
+import shutil
 
 from ._utils import time_method
 
@@ -27,102 +29,130 @@ from ._sequences import sequences
 _logger = logging.getLogger("pump.repo")
 
 
+def export_table(db, table_name: str, out_f: str):
+    with open(out_f, 'w', encoding='utf-8') as fout:
+        js = db.fetch_one(f'SELECT json_agg(row_to_json(t)) FROM "{table_name}" t')
+        json.dump(js, fout)
+
+
 class repo:
     @time_method
     def __init__(self, env: dict, dspace):
-        def _f(name): return os.path.join(env["input"]["datadir"], name)
+
+        self.raw_db_dspace_5 = db(env["db_dspace_5"])
+        self.raw_db_utilities_5 = db(env["db_utilities_5"])
+
+        # remove directory
+        if os.path.exists(env["input"]["tempdbexport"]):
+            shutil.rmtree(env["input"]["tempdbexport"])
+
+        tables_db_5 = [x for arr in self.raw_db_dspace_5.all_tables() for x in arr]
+        tables_utilities_5 = [x for arr in self.raw_db_utilities_5.all_tables()
+                              for x in arr]
+
+        def _f(table_name):
+            """ Dynamically export the table to json file and return path to it. """
+            os.makedirs(env["input"]["tempdbexport"], exist_ok=True)
+            out_f = os.path.join(env["input"]["tempdbexport"], f"{table_name}.json")
+            if table_name in tables_db_5:
+                db = self.raw_db_dspace_5
+            elif table_name in tables_utilities_5:
+                db = self.raw_db_utilities_5
+            else:
+                _logger.warning(f"Table [{table_name}] not found in db.")
+                raise NotImplementedError(f"Table [{table_name}] not found in db.")
+            export_table(db, table_name, out_f)
+            return out_f
 
         # load groups
         self.groups = groups(
-            _f("epersongroup.json"),
-            _f("group2group.json"),
+            _f("epersongroup"),
+            _f("group2group"),
         )
         self.groups.from_rest(dspace)
 
         # load handles
-        self.handles = handles(_f("handle.json"))
+        self.handles = handles(_f("handle"))
 
         # load metadata
         self.metadatas = metadatas(
             env,
             dspace,
-            _f("metadatavalue.json"),
-            _f("metadatafieldregistry.json"),
-            _f("metadataschemaregistry.json"),
+            _f("metadatavalue"),
+            _f("metadatafieldregistry"),
+            _f("metadataschemaregistry"),
         )
 
         # load community
         self.communities = communities(
-            _f("community.json"),
-            _f("community2community.json"),
+            _f("community"),
+            _f("community2community"),
         )
 
         self.collections = collections(
-            _f("collection.json"),
-            _f("community2collection.json"),
-            _f("metadatavalue.json"),
+            _f("collection"),
+            _f("community2collection"),
+            _f("metadatavalue"),
         )
 
         self.registrationdatas = registrationdatas(
-            _f("registrationdata.json")
+            _f("registrationdata")
         )
 
         self.epersons = epersons(
-            _f("eperson.json")
+            _f("eperson")
         )
 
         self.egroups = eperson_groups(
-            _f("epersongroup2eperson.json")
+            _f("epersongroup2eperson")
         )
 
         self.userregistrations = userregistrations(
-            _f("user_registration.json")
+            _f("user_registration")
         )
 
         self.bitstreamformatregistry = bitstreamformatregistry(
-            _f("bitstreamformatregistry.json"), _f("fileextension.json")
+            _f("bitstreamformatregistry"), _f("fileextension")
         )
 
         self.licenses = licenses(
-            _f("license_label.json"),
-            _f("license_definition.json"),
-            _f("license_label_extended_mapping.json"),
+            _f("license_label"),
+            _f("license_definition"),
+            _f("license_label_extended_mapping"),
         )
 
         self.items = items(
-            _f("item.json"),
-            _f("workspaceitem.json"),
-            _f("workflowitem.json"),
-            _f("collection2item.json"),
+            _f("item"),
+            _f("workspaceitem"),
+            _f("workflowitem"),
+            _f("collection2item"),
         )
 
         self.tasklistitems = tasklistitems(
-            _f("tasklistitem.json")
+            _f("tasklistitem")
         )
 
         self.bundles = bundles(
-            _f("bundle.json"),
-            _f("item2bundle.json"),
+            _f("bundle"),
+            _f("item2bundle"),
         )
 
         self.bitstreams = bitstreams(
-            _f("bitstream.json"),
-            _f("bundle2bitstream.json"),
+            _f("bitstream"),
+            _f("bundle2bitstream"),
         )
 
         self.usermetadatas = usermetadatas(
-            _f("user_metadata.json"),
-            _f("license_resource_user_allowance.json"),
-            _f("license_resource_mapping.json")
+            _f("user_metadata"),
+            _f("license_resource_user_allowance"),
+            _f("license_resource_mapping")
         )
 
         self.resourcepolicies = resourcepolicies(
-            _f("resourcepolicy.json")
+            _f("resourcepolicy")
         )
 
         self.raw_db_7 = db(env["db_dspace_7"])
-        self.raw_db_dspace_5 = db(env["db_dspace_5"])
-        self.raw_db_utilities_5 = db(env["db_utilities_5"])
 
         self.sequences = sequences()
 

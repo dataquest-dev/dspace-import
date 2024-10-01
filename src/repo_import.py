@@ -80,12 +80,6 @@ if __name__ == "__main__":
     for k, v in env["cache"].items():
         env["cache"][k] = os.path.join(env["resume_dir"], v)
 
-    # input data directory
-    input_dir = env["input"]["datadir"]
-    if not os.path.exists(input_dir):
-        _logger.critical(f"Input directory [{input_dir}] does not exist - cannot import.")
-        sys.exit(1)
-
     dspace_be = dspace.rest(
         env["backend"]["endpoint"],
         env["backend"]["user"],
