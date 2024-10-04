@@ -88,6 +88,8 @@ class collections:
 
     @time_method
     def import_to(self, dspace, handles, metadatas, coms):
+        ITEM = "ITEM"
+        BITSTREAM = "BITSTREAM"
         expected = len(self)
         log_key = "collections"
         log_before_import(log_key, expected)
@@ -155,7 +157,7 @@ class collections:
                     resp = dspace.put_collection_bitstream_read_group(col_uuid)
                     self._groups_id2uuid.setdefault(str(group_col), []).append(resp['id'])
                     self._imported["group"] += 1
-                    self._groups_uuid2type[resp['id']] = "BITSTREAM"
+                    self._groups_uuid2type[resp['id']] = BITSTREAM
                 except Exception as e:
                     _logger.error(
                         f'put_collection_bitstream_read_group: [{col_id}] failed [{str(e)}]')
@@ -164,7 +166,7 @@ class collections:
                     resp = dspace.put_collection_item_read_group(col_uuid)
                     self._groups_id2uuid.setdefault(str(group_col), []).append(resp['id'])
                     self._imported["group"] += 1
-                    self._groups_uuid2type[resp['id']] = "ITEM"
+                    self._groups_uuid2type[resp['id']] = ITEM
                 except Exception as e:
                     _logger.error(
                         f'put_collection_item_read_group: [{col_id}] failed [{str(e)}]')
