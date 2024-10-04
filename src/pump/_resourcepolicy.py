@@ -32,6 +32,9 @@ class resourcepolicies:
 
     @time_method
     def import_to(self, env, dspace, repo):
+        DEFAULT_BITSTREAM_READ = "DEFAULT_BITSTREAM_READ"
+        ITEM = "ITEM"
+        BITSTREAM = "BITSTREAM"
         expected = len(self)
         log_key = "resourcepolicies"
         log_before_import(log_key, expected)
@@ -92,11 +95,20 @@ class resourcepolicies:
             # get group if it is not none
             eg_id = res_policy['epersongroup_id']
             if eg_id is not None:
-                group_list1 = repo.groups.uuid(eg_id)
-                group_list2 = repo.collections.group_uuid(eg_id)
-                group_list = set(group_list1 + group_list2)
+                # groups created with coll and comm are already in the group
+                group_list = repo.groups.uuid(eg_id)
                 if len(group_list) == 0:
                     continue
+                if len(group_list) > 1:
+                    group_types = repo.collections.groups_uuid2type
+                    # Determine the target type based on the action
+                    target_type = BITSTREAM if dspace_actions[actionId] == DEFAULT_BITSTREAM_READ else ITEM
+                    # Filter group_list to find the appropriate group based on type
+                    for group in group_list:
+                        if group in group_types and group_types[group] == target_type:
+                            group_list = [group]
+                            break
+
                 imported_groups = 0
                 for group in group_list:
                     params['group'] = group
