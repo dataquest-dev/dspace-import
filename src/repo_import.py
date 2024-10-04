@@ -282,7 +282,7 @@ if __name__ == "__main__":
     # created data
     repo.raw_db_7.delete_resource_policy()
 
-    # import bitstreams
+    # import resourcepolicy
     cache_file = env["cache"]["resourcepolicy"]
     if deserialize(args.resume, repo.resourcepolicies, cache_file):
         _logger.info(f"Resuming resourcepolicies [{repo.resourcepolicies.imported}]")
