@@ -33,8 +33,6 @@ class resourcepolicies:
     @time_method
     def import_to(self, env, dspace, repo):
         DEFAULT_BITSTREAM_READ = "DEFAULT_BITSTREAM_READ"
-        ITEM = "ITEM"
-        BITSTREAM = "BITSTREAM"
         expected = len(self)
         log_key = "resourcepolicies"
         log_before_import(log_key, expected)
@@ -102,7 +100,8 @@ class resourcepolicies:
                 if len(group_list) > 1:
                     group_types = repo.collections.groups_uuid2type
                     # Determine the target type based on the action
-                    target_type = BITSTREAM if dspace_actions[actionId] == DEFAULT_BITSTREAM_READ else ITEM
+                    target_type = repo.collections.BITSTREAM \
+                        if dspace_actions[actionId] == DEFAULT_BITSTREAM_READ else repo.collections.ITEM
                     # Filter group_list to find the appropriate group based on type
                     for group in group_list:
                         if group in group_types and group_types[group] == target_type:
