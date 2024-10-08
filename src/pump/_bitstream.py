@@ -232,6 +232,8 @@ class bitstreams:
                 resp = dspace.put_bitstream(params, data)
                 self._id2uuid[str(b_id)] = resp['id']
                 self._imported["bitstream"] += 1
+                if b['deleted']:
+                    logging.warning(f'Imported bitstream is deleted! UUID: {resp["id"]}')
             except Exception as e:
                 _logger.error(f'put_bitstream [{b_id}]: failed. Exception: [{str(e)}]')
 
