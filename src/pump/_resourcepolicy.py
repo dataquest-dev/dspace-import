@@ -116,7 +116,7 @@ class resourcepolicies:
                         if group in group_types and group_types[group] == target_type
                     ]
 
-                    if len(group_type_list) > 1:
+                    if len(group_type_list) != 1:
                         raise RuntimeError(
                             f'Unexpected size of filtered groups for group [{eg_id}] '
                             f'of type [{target_type}]: {len(group_type_list)}. Expected size: 1.'
