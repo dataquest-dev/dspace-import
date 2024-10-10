@@ -19,6 +19,8 @@ class resourcepolicies:
             "respol": 0,
         }
 
+    DEFAULT_BITSTREAM_READ = "DEFAULT_BITSTREAM_READ"
+
     def __len__(self):
         return len(self._respol)
 
@@ -92,11 +94,36 @@ class resourcepolicies:
             # get group if it is not none
             eg_id = res_policy['epersongroup_id']
             if eg_id is not None:
-                group_list1 = repo.groups.uuid(eg_id)
-                group_list2 = repo.collections.group_uuid(eg_id)
-                group_list = set(group_list1 + group_list2)
+                # groups created with coll and comm are already in the group
+                group_list = repo.groups.uuid(eg_id)
                 if len(group_list) == 0:
                     continue
+                if len(group_list) > 1:
+                    if len(group_list) != 2:
+                        raise RuntimeError(
+                            f'Unexpected size of mapped groups to group [{eg_id}]: {len(group_list)}. '
+                            f'Expected size: 2.')
+                    group_types = repo.collections.groups_uuid2type
+                    # Determine the target type based on the action
+                    target_type = (
+                        repo.collections.BITSTREAM
+                        if dspace_actions[actionId] == resourcepolicies.DEFAULT_BITSTREAM_READ
+                        else repo.collections.ITEM
+                    )
+                    # Filter group_list to find the appropriate group based on type using list comprehension
+                    group_type_list = [
+                        group for group in group_list
+                        if group in group_types and group_types[group] == target_type
+                    ]
+
+                    if len(group_type_list) != 1:
+                        raise RuntimeError(
+                            f'Unexpected size of filtered groups for group [{eg_id}] '
+                            f'of type [{target_type}]: {len(group_type_list)}. Expected size: 1.'
+                        )
+
+                    group_list = group_type_list
+
                 imported_groups = 0
                 for group in group_list:
                     params['group'] = group

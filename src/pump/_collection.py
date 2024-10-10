@@ -20,6 +20,8 @@ class collections:
     ]
 
     TYPE = 3
+    ITEM = "ITEM"
+    BITSTREAM = "BITSTREAM"
 
     def __init__(self, col_file_str: str, com2col_file_str: str, metadata_file_str: str):
         self._col = read_json(col_file_str)
@@ -33,6 +35,7 @@ class collections:
 
         self._logos = {}
         self._groups_id2uuid = {}
+        self._groups_uuid2type = {}
 
         if len(self._col) == 0:
             _logger.info(f"Empty input collections: [{col_file_str}].")
@@ -80,6 +83,10 @@ class collections:
     @property
     def groups_id2uuid(self):
         return self._groups_id2uuid
+
+    @property
+    def groups_uuid2type(self):
+        return self._groups_uuid2type
 
     @time_method
     def import_to(self, dspace, handles, metadatas, coms):
@@ -150,6 +157,7 @@ class collections:
                     resp = dspace.put_collection_bitstream_read_group(col_uuid)
                     self._groups_id2uuid.setdefault(str(group_col), []).append(resp['id'])
                     self._imported["group"] += 1
+                    self._groups_uuid2type[resp['id']] = collections.BITSTREAM
                 except Exception as e:
                     _logger.error(
                         f'put_collection_bitstream_read_group: [{col_id}] failed [{str(e)}]')
@@ -158,6 +166,7 @@ class collections:
                     resp = dspace.put_collection_item_read_group(col_uuid)
                     self._groups_id2uuid.setdefault(str(group_col), []).append(resp['id'])
                     self._imported["group"] += 1
+                    self._groups_uuid2type[resp['id']] = collections.ITEM
                 except Exception as e:
                     _logger.error(
                         f'put_collection_item_read_group: [{col_id}] failed [{str(e)}]')
@@ -172,6 +181,7 @@ class collections:
             "logos": self._logos,
             "groups_id2uuid": self._groups_id2uuid,
             "imported": self._imported,
+            "groups_uuid2type": self._groups_uuid2type,
         }
         serialize(file_str, data)
 
@@ -183,3 +193,4 @@ class collections:
         self._logos = data["logos"]
         self._groups_id2uuid = data["groups_id2uuid"]
         self._imported = data["imported"]
+        self._groups_uuid2type = data["groups_uuid2type"]
