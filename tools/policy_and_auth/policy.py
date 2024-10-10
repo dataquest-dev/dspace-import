@@ -48,7 +48,7 @@ def get_all_items(col):
     """
     page = 0
     # pagination limit of 100, use 50
-    size = 99
+    size = 50
     items = []
     has_more = True
     while has_more:
