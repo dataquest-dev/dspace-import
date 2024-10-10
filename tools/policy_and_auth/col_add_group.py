@@ -7,14 +7,15 @@ import os
 import sys
 
 _this_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(_this_dir, "../src"))
+path_to_dspace_lib = os.path.join(_this_dir, "../../libs/dspace-rest-python")
+sys.path.insert(0, path_to_dspace_lib)
+sys.path.insert(0, os.path.join(_this_dir, "../../src"))
 
 
 import dspace  # noqa
 import settings  # noqa
 import project_settings  # noqa
-from dspace.impl.models import Item  # noqa
-from dspace.impl.models import Community  # noqa
+from dspace_rest_client.models import Item, Community  # noqa
 from utils import init_logging, update_settings  # noqa
 
 _logger = logging.getLogger()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
         'submitter_failed': 0
     }
 
-    start_page = 17
+    start_page = 0
     for page in range(start_page, 1000):
         # Get all collections
         subcolls = dspace_be.client.get_collections(page=page, size=50)

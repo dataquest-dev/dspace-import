@@ -7,13 +7,14 @@ import os
 import sys
 
 _this_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(_this_dir, "../src"))
+path_to_dspace_lib = os.path.join(_this_dir, "../../libs/dspace-rest-python")
+sys.path.insert(0, os.path.join(_this_dir, "../../src"))
 
 
 import dspace  # noqa
 import settings  # noqa
 import project_settings  # noqa
-from dspace.impl.models import Item, Community  # noqa
+from dspace_rest_client.models import Item, Community  # noqa
 from utils import init_logging, update_settings  # noqa
 
 _logger = logging.getLogger()
@@ -53,7 +54,7 @@ def get_all_items(col):
     while has_more:
         cur_items = dspace_be.client.get_items_from_collection(
             col.uuid, page=page, size=size)
-        if cur_items is None:
+        if cur_items is None or len(cur_items) == 0:
             return items
         items += cur_items
         page += 1
@@ -114,8 +115,10 @@ if __name__ == '__main__':
                         f'No {args.bundle_name} bundle for item uuid={item.uuid}')
                     cnt["without_file"] += 1
                     continue
+                bundle_resource_policy = dspace_be.client.get_resource_policy(bundle.uuid)
                 cnt["updated"] += 1
-                update_resource_policy(dspace_be, None, item, bundle, args.group)
+                update_resource_policy(
+                    dspace_be, bundle_resource_policy, item, bundle, args.group)
 
             if args.policy_of == "item":
                 item_resource_policy = dspace_be.client.get_resource_policy(item.uuid)
@@ -125,7 +128,8 @@ if __name__ == '__main__':
                     cnt["without_item_r_policy"] += 1
                     continue
                 cnt["updated"] += 1
-                update_resource_policy(dspace_be, None, item, bundle, args.group)
+                update_resource_policy(
+                    dspace_be, item_resource_policy, item, bundle, args.group)
 
             if args.policy_of == "bitstream":
                 if bundle is None:
