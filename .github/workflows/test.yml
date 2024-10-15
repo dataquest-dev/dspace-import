@@ -16,11 +16,15 @@ jobs:
         with:
           submodules: recursive      
 
-      - name: install requirements and run smoketest
+      - name: install requirements
         run: |
           echo Installing requirements
           python3 -m venv _gaenv && source _gaenv/bin/activate
+          python3 -m pip install --upgrade setuptools six
           python3 -m pip install -r libs/dspace-rest-python/requirements.txt
           python3 -m pip install -r requirements.txt
+          
+      - name: run smoketest
+        run: |
           cd ./src
           python repo_import.py --help
