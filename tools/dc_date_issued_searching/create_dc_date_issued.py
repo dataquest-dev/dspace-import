@@ -19,20 +19,62 @@ _logger = logging.getLogger()
 env = update_settings(settings.env, project_settings.settings)
 init_logging(_logger, env["log_file"])
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Add metadata for DSpace items")
-    parser.add_argument("--to_mtd_field",
-                        type=str, required=True, help="Metadata field that we want created.")
-    parser.add_argument(
-        "--from_mtd_field",
-        type=str,
-        nargs='+',  # Accept one or more values
-        required=True,
-        help="Metadata field(s) than value(s) can be used."
-    )
 
-    args = parser.parse_args()
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Add metadata for DSpace items")
+    parser.add_argument("--to_mtd_field",
+                        type=str, required=True, help="Metadata field to be created.")
+    parser.add_argument("--from_mtd_field",
+                        type=str, nargs='+', required=True,
+                        help="Metadata field(s) from which value(s) can be used.")
+    return parser.parse_args()
+
+
+def fetch_items(dspace_be):
+    """Fetch items from DSpace backend, filtering out withdrawn or non-archived items."""
+    all_items = dspace_be.fetch_items()
+    return [
+        item for item in all_items
+        if not item['withdrawn'] and item['inArchive'] and args.to_mtd_field not in item['metadata']
+    ]
+
+
+def create_missing_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
+    """Create missing metadata for items based on provided fields."""
+    created, not_created, error_items = [], [], []
+
+    for item in items:
+        mtd = item["metadata"]
+        found = False
+
+        for from_mtd in from_mtd_fields:
+            if from_mtd in mtd and mtd[from_mtd]:
+                found = True
+                val = mtd[from_mtd][0]["value"]
+                _logger.info(
+                    f"Metadata [{to_mtd_field}] replaced by [{from_mtd}] for item [{item['uuid']}]")
+
+                # Add the new metadata
+                if dspace_be.client.add_metadata(Item(item), to_mtd_field, val):
+                    created.append(item["uuid"])
+                else:
+                    _logger.warning(
+                        f"Error creating metadata [{to_mtd_field}] for item [{item['uuid']}]")
+                    error_items.append(item["uuid"])
+
+                break  # Stop searching once we find a valid field
+
+        if not found:
+            not_created.append(item["id"])
+
+    return created, not_created, error_items
+
+
+if __name__ == '__main__':
+    args = parse_arguments()
+
+    # Initialize DSpace backend
     dspace_be = dspace.rest(
         env["backend"]["endpoint"],
         env["backend"]["user"],
@@ -40,46 +82,16 @@ if __name__ == '__main__':
         env["backend"]["authentication"]
     )
 
-    all_items = dspace_be.fetch_items()
-    items = []
-    # Check which items do not contain dc.date.issued
-    for item in all_items:
-        # Check if item is withdrawn or is not in archive
-        if item['withdrawn'] or not item['inArchive']:
-            continue
-        mtd = item['metadata']
-        if args.to_mtd_field not in mtd:
-            items.append(item)
+    # Fetch and filter items
+    items_to_update = fetch_items(dspace_be)
 
-    # Create missing mtd
-    from_mtd_field = args.from_mtd_field
-    created = []
-    no_created = []
-    error_items = []
-    for item in items:
-        mtd = item["metadata"]
-        found = False
-        for from_mtd in from_mtd_field:
-            if from_mtd in mtd:
-                if len(mtd[from_mtd]) == 0:
-                    _logger.info(
-                        f"No values for metadata [{from_mtd}] of item [{item['uuid']}]")
-                    break
-                found = True
-                _logger.info(
-                    f"Metadata [{args.to_mtd_field}] replaced by [{from_mtd}] for item [{item['uuid']}]")
-                val = mtd[from_mtd][0]["value"]
-                r = dspace_be.client.add_metadata(Item(item), args.to_mtd_field, val)
-                if r is not None:
-                    created.append(item["uuid"])
-                    break
-                else:
-                    logging.warning(
-                        f"Error during creating metadata [{args.to_mtd_field}] for item [{item['uuid']}]")
-                    error_items.append(item["uuid"])
-        if not found:
-            no_created.append(item["id"])
+    # Create missing metadata
+    created, not_created, error_items = create_missing_metadata(
+        dspace_be, items_to_update, args.from_mtd_field, args.to_mtd_field
+    )
+
+    # Log results
     _logger.info(f"Metadata [{args.to_mtd_field}] added to items: {created}")
-    _logger.warning(f"Metadata [{args.to_mtd_field}] do not added to items: {no_created}")
+    _logger.warning(f"Metadata [{args.to_mtd_field}] not added to items: {not_created}")
     _logger.warning(
-        f"Error during added metadata [{args.to_mtd_field}] to items: {error_items}")
+        f"Error adding metadata [{args.to_mtd_field}] to items: {error_items}")

@@ -338,19 +338,17 @@ class rest:
         _logger.debug(f"Fatch [] using [{url}]")
         page = 0
         items = []
-        has_more = True
-        while has_more:
+        while True:
             r = self._fetch(url, self.get, "_embedded",
                             params={"page": page, "size": 100})
-            if not r:
-                return items
-            key = "items"
-            if key in r:
-                r = r[key]
-                items.extend(r)
+            if r is None:
+                break
+            items_data = r.get("items", [])
+            if items_data:
+                items.extend(items_data)
             else:
-                _logger.warning(f"Key [{key}] does not exist in response: {r}")
-            page += 1
+                _logger.warning(f"Key [items] does not exist in response: {r}")
+            page += r
         return items
 
     def put_ws_item(self, param: dict, data: dict):
