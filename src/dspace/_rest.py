@@ -343,12 +343,13 @@ class rest:
                             params={"page": page, "size": 100})
             if r is None:
                 break
-            items_data = r.get("items", [])
+            key = "items"
+            items_data = r.get(key, [])
             if items_data:
                 items.extend(items_data)
             else:
-                _logger.warning(f"Key [items] does not exist in response: {r}")
-            page += r
+                _logger.warning(f"Key [{key}] does not exist in response: {r}")
+            page += 1
         return items
 
     def put_ws_item(self, param: dict, data: dict):

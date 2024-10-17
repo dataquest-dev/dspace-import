@@ -1,4 +1,4 @@
-# add+metadata.py
+# add_metadata.py
 
 This script adds new metadata to items that are missing it. The values for this new metadata are taken from the existing input metadata field.
 ```
