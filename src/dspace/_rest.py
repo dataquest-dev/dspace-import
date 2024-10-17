@@ -333,6 +333,26 @@ class rest:
         _logger.debug(f"Importing [] using [{url}]")
         return self._fetch(url, self.get, None)
 
+    def fetch_items(self):
+        url = 'core/items'
+        _logger.debug(f"Fatch [] using [{url}]")
+        page = 0
+        items = []
+        has_more = True
+        while has_more:
+            r = self._fetch(url, self.get, "_embedded",
+                            params={"page": page, "size": 100})
+            if not r:
+                return items
+            key = "items"
+            if key in r:
+                r = r[key]
+                items.extend(r)
+            else:
+                _logger.warning(f"Key [{key}] does not exist in response: {r}")
+            page += 1
+        return items
+
     def put_ws_item(self, param: dict, data: dict):
         url = 'clarin/import/workspaceitem'
         _logger.debug(f"Importing [{data}] using [{url}]")
