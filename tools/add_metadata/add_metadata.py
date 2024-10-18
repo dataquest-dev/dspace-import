@@ -77,7 +77,7 @@ def update_item(item: Item):
         return item
     # Try to authenticate
     _logger.info("Reauthorization during item updating")
-    if dspace_be.client.authenticate(retry=True):
+    if dspace_be.client.authenticate():
         return dspace_be.client.update_item(item)
     return None
 
