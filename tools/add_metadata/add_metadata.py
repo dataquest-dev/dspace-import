@@ -68,7 +68,17 @@ def convert_to_date(value: str):
             return datetime_obj.strftime('%Y-%m-%d')
         except ValueError:
             continue
-    _logger.error(f"Error converting [{value}] to date.")
+    _logger.warning(f"Error converting [{value}] to date.")
+    return None
+
+
+def update_item(item: Item):
+    if dspace_be.client.update_item(item):
+        return item
+    # Try to authenticate
+    _logger.info("Reauthorization during item updating")
+    if dspace_be.client.authenticate(retry=True):
+        return dspace_be.client.update_item(item)
     return None
 
 
@@ -88,13 +98,13 @@ def process_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
             _logger.info(f"Item [{uuid}] has an invalid date in [{to_mtd_field}]: {val}")
             new_mtd = convert_to_date(val)
             if new_mtd is None:
-                _logger.warning(f"Cannot convert [{to_mtd_field}] "
-                                f"to valid date for item [{uuid}]: {val}")
+                _logger.error(f"Cannot convert [{to_mtd_field}] "
+                              f"to valid date for item [{uuid}]: {val}")
                 error_items.append(uuid)
                 continue
             item_mtd[to_mtd_field][0]["value"] = new_mtd
             item["metadata"] = item_mtd
-            if dspace_be.client.update_item(Item(item)):
+            if update_item(Item(item)):
                 updated.append(uuid)
             else:
                 _logger.error(
