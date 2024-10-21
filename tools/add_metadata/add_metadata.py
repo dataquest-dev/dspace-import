@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import datetime
 
+# Set up directories for imports
 _this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_this_dir, "../../src"))
 sys.path.insert(0, os.path.join(_this_dir, "../../src/pump"))
@@ -56,7 +57,6 @@ def convert_to_date(value: str):
     """Convert the value to a date format. Normalize date to 'YYYY-MM-DD' format, filling missing parts with '01'."""
     formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y',
                '%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y']
-    found = False
     for fmt in formats:
         try:
             datetime_obj = datetime.strptime(value, fmt)
@@ -67,6 +67,7 @@ def convert_to_date(value: str):
                 return datetime_obj.strftime('%Y-01-01')
             return datetime_obj.strftime('%Y-%m-%d')
         except ValueError:
+            # The test format does not match the input date format
             continue
     _logger.warning(f"Error converting [{value}] to date.")
     return None
@@ -90,11 +91,17 @@ def process_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
         uuid = item['uuid']
         item_mtd = item["metadata"]
 
+        # Check if the target metadata field exists and is not empty
         if to_mtd_field in item_mtd and item_mtd[to_mtd_field]:
+            # If there is more than one value, get only the first one
             val = item_mtd[to_mtd_field][0]["value"]
+
+            # Check if the date is in the correct format
             if is_valid_date(val):
                 ok_items.append(uuid)
                 continue
+
+            # Convert date to correct format if necessary
             _logger.info(f"Item [{uuid}] has an invalid date in [{to_mtd_field}]: {val}")
             new_mtd = convert_to_date(val)
             if new_mtd is None:
@@ -102,8 +109,12 @@ def process_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
                               f"to valid date for item [{uuid}]: {val}")
                 error_items.append(uuid)
                 continue
+
+            # Update the item metadata with the converted date
             item_mtd[to_mtd_field][0]["value"] = new_mtd
             item["metadata"] = item_mtd
+
+            # Update the item in the database
             if update_item(Item(item)):
                 updated.append(uuid)
             else:
@@ -112,18 +123,26 @@ def process_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
                 error_items.append(uuid)
         else:
             found = False
+            # Check other metadata fields to create the target metadata field if not present
             for from_mtd in from_mtd_fields:
+                # Check if the target metadata field exists and is not empty
                 if from_mtd in item_mtd and item_mtd[from_mtd]:
+                    # If there is more than one value, get only the first one
                     val = item_mtd[from_mtd][0]["value"]
+
+                    # Convert date if necessary
                     if not is_valid_date(val):
                         val = convert_to_date(val)
                         if val is None:
                             _logger.warning(f"Cannot convert [{from_mtd}] "
                                             f"to valid date for item [{uuid}]: {val}")
                             continue
+
                     found = True
                     _logger.info(
                         f"Metadata [{to_mtd_field}] created from [{from_mtd}] for item [{uuid}]")
+
+                    # Update the item in the database
                     if dspace_be.client.add_metadata(Item(item), to_mtd_field, val):
                         created.append(uuid)
                     else:
@@ -132,6 +151,7 @@ def process_metadata(dspace_be, items, from_mtd_fields, to_mtd_field):
                         error_items.append(uuid)
                     break
 
+            # If no valid metadata field was found, add the item to the not_created list
             if not found:
                 not_created.append(uuid)
 
@@ -159,6 +179,7 @@ if __name__ == '__main__':
 
     # Log results
     _logger.info(f"Items with correct [{args.to_mtd_field}]: {ok_items}")
+    _logger.info(f"Items with updated [{args.to_mtd_field}]: {updated}")
     _logger.info(f"Items with created [{args.to_mtd_field}]: {created}")
     _logger.warning(f"Items where [{args.to_mtd_field}] was not created: {not_created}")
     _logger.warning(f"Items with errors during processing: {error_items}")
