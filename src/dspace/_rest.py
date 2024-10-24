@@ -333,6 +333,54 @@ class rest:
         _logger.debug(f"Importing [] using [{url}]")
         return self._fetch(url, self.get, None)
 
+    def fetch_items(self, page_size: int = 100, limit=None):
+        url = 'core/items'
+        _logger.debug(f"Fetch [] using [{url}]")
+        page = 0
+        items = []
+        while True:
+            r = self._fetch(url, self.get, "_embedded",
+                            params={"page": page, "size": page_size})
+            if r is None:
+                break
+            key = "items"
+            items_data = r.get(key, [])
+            if items_data:
+                items.extend(items_data)
+            else:
+                _logger.warning(f"Key [{key}] does not exist in response: {r}")
+            page += 1
+
+            if limit is not None and len(items) > limit:
+                return items[:limit]
+        return items
+
+    def iter_items(self, page_size: int = 100, limit: int = -1):
+        from tqdm import tqdm
+
+        url = 'core/items'
+        _logger.debug(f"Fetch iter [] using [{url}]")
+        page = 0
+        len_items = 0
+        with tqdm(desc="Fetching items", unit=" items") as pbar:
+            while True:
+                r = self._fetch(url, self.get, "_embedded",
+                                params={"page": page, "size": page_size})
+                if r is None:
+                    break
+                key = "items"
+                items_data = r.get(key, [])
+                if items_data:
+                    len_items += len(items_data)
+                    yield items_data
+                else:
+                    _logger.warning(f"Key [{key}] does not exist in response: {r}")
+                page += 1
+                pbar.update(len(items_data))
+
+                if len_items > limit > 0:
+                    return
+
     def put_ws_item(self, param: dict, data: dict):
         url = 'clarin/import/workspaceitem'
         _logger.debug(f"Importing [{data}] using [{url}]")
