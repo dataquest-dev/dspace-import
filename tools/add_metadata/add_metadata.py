@@ -16,6 +16,7 @@ import settings  # noqa
 import project_settings  # noqa
 from dspace_rest_client.models import Item
 from utils import init_logging, update_settings  # noqa
+logging.getLogger("dspace.client").setLevel(logging.WARNING)
 
 _logger = logging.getLogger()
 
@@ -159,6 +160,8 @@ class updater:
             if date_meta is None:
                 continue
             id_str = f"Item [{uuid}]: [{from_mtd}]"
+            if len(date_meta) != 1:
+                _logger.warning(f"{id_str}: more than one value {date_meta}")
 
             # If there is more than one value, get only the first one
             date_val = date(date_meta[0]["value"])
@@ -199,6 +202,26 @@ class updater:
             return self.add_new_metadata(item)
 
 
+class additional_stats:
+
+    def __init__(self):
+        self._titles = defaultdict(int)
+
+    def update(self, item: dict):
+        dc_titles = item['metadata'].get('dc.title', [])
+        if len(dc_titles) > 0:
+            self._titles[dc_titles[0]['value']] += 1
+
+    def print_info(self, show_limit=100):
+        duplicates = {k: v for k, v in self._titles.items() if v > 1}
+        _logger.info(
+            f"Duplicates {len(duplicates)} ({sum(duplicates.values())})  (showing first {show_limit}):")
+        for i, (k, v) in enumerate(duplicates.items()):
+            if i >= show_limit:
+                break
+            _logger.info(f"Title [{k}] : {v}")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Add metadata for DSpace items")
     parser.add_argument("--to_mtd_field",
@@ -211,6 +234,7 @@ if __name__ == '__main__':
     parser.add_argument("--password", type=str, default=env["backend"]["password"])
     parser.add_argument("--dry-run", action='store_true', default=False)
     args = parser.parse_args()
+    _logger.info(f"Arguments: {args}")
 
     start = time.time()
 
@@ -219,14 +243,17 @@ if __name__ == '__main__':
 
     upd = updater(dspace_be, args.from_mtd_field, args.to_mtd_field, dry_run=args.dry_run)
 
-    titles = defaultdict(int)
+    stats = additional_stats()
+
     # Process items
+    len_all_items = 0
+    len_used_items = 0
     for items in dspace_be.iter_items():
+        len_all_items += len(items)
         items = [item for item in items if not item['withdrawn'] and item['inArchive']]
+        len_used_items += len(items)
         for item in items:
-            dc_titles = item['metadata'].get('dc.title', [])
-            if len(dc_titles) > 0:
-                titles[dc_titles[0]['value']] += 1
+            stats.update(item)
             upd.update(item)
 
     _logger.info(40 * "=")
@@ -245,16 +272,22 @@ if __name__ == '__main__':
     _logger.info(f"Date invalid [{len(msgs)}]:\n\t{msgs}")
 
     _logger.info(40 * "=")
-    show_limit = 100
-    duplicates = {k: v for k, v in titles.items() if v > 1}
-    _logger.info("Duplicates {len(duplicates)}  (showing first {show_limit}:")
-    for i, (k, v) in enumerate(duplicates.items()):
-        if i >= show_limit:
-            break
-        _logger.info(f"Title [{k}] : {v}")
+    stats.print_info()
 
     _logger.info(40 * "=")
-    _logger.info("Statistics:")
+    _logger.info("Update statistics:")
     for k, v in upd.info.items():
         _logger.info(f"{k:25s}: {len(v):6d}")
-    _logger.info(f"Total time: {time.time() - start:.2f} s")
+    took = time.time() - start
+
+    _logger.info(40 * "=")
+    _logger.info("Counts:")
+    _logger.info(f"Total items: {len_all_items}")
+    _logger.info(f"Used items: {len_used_items}")
+    # sets are not counted
+    _logger.info(
+        f"Sum of updates: {sum(len(x) for x in upd.info.values() if isinstance(x, list))}")
+
+    _logger.info(40 * "=")
+    _logger.info(
+        f"Total time: {took:.2f} s [{time.strftime('%H:%M:%S', time.gmtime(took))}]")
