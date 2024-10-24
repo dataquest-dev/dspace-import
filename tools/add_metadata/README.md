@@ -4,3 +4,7 @@ This script adds new metadata to items that are missing it. The values for this 
 ```
 python add_metadata.py --to_mtd_field dc.date.issued --from_mtd_field dc.date.submitted dc.date.committed dc.date.defense dc.date
 ```
+Dry run:
+```
+python add_metadata.py --dry-run --endpoint="http://dev-5.pc:86/server/api/" --to_mtd_field dc.date.issued --from_mtd_field dc.date.submitted dc.date.committed dc.date.defense dc.date
+```
