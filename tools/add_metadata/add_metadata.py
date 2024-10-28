@@ -56,13 +56,13 @@ class date:
         if len(self._d) < 1:
             return False
 
-        formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y',
+        formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', '%d. %m. %Y', '%Y',
                    '%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y']
         for fmt in formats:
             try:
                 datetime_obj = datetime.strptime(self._d, fmt)
                 # Normalize date to 'YYYY-MM-DD'
-                if fmt in ['%Y-%m', '%Y/%m', '%Y.%m']:
+                if fmt in ['%Y-%m', '%Y/%m', '%Y.%m', '%m-%Y', '%m/%Y', '%m.%Y']:
                     self._d = datetime_obj.strftime('%Y-%m-01')
                 elif fmt == '%Y':
                     self._d = datetime_obj.strftime('%Y-01-01')
@@ -97,6 +97,7 @@ class updater:
         self._dry_run = dry_run
         self._info = {
             "valid": [],
+            "multiple": [],
             "invalid_date": [],
             "invalid_date_all": set(),
             "updated": [],
@@ -194,7 +195,29 @@ class updater:
         # Check if the target metadata field exists and is not empty
         date_meta = item_mtd.get(self._to_mtd_field, None)
         if date_meta is not None:
-            return self.update_existing_metadata(item, date_meta[0]["value"])
+            val = date_meta[0]["value"]
+            # Check if items have multiple values for to_mtd_value
+            if len(date_meta) > 1:
+                _logger.warning(
+                    f'Item [{uuid}] has multiple values for {self._to_mtd_field}!')
+                self._info["multiple"].append(uuid)
+                if not self._dry_run:
+                    val = ''
+                    for i in range(len(date_meta)):
+                        if len(val) == 0:
+                            date_val = date(date_meta[i]["value"])
+                            if date_val.is_valid() or date_val.parse():
+                                val = date_val.value
+                                continue
+                        if val == '' and i == len(date_meta) - 1:
+                            val = date_meta[i]["value"]
+                            continue
+                        dspace_be.client.remove_metadata(
+                            Item(item), self._to_mtd_field, i)
+
+                    # Reload item and metadata
+                    item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
+            return self.update_existing_metadata(item, val)
         else:
             return self.add_new_metadata(item)
 
