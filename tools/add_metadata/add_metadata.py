@@ -197,6 +197,8 @@ class updater:
         # Check if the target metadata field exists and is not empty
         date_meta = item_mtd.get(self._to_mtd_field, None)
         if date_meta is not None:
+            if len(date_meta) != 1:
+                _logger.critical(f"{uuid}: more than one value {date_meta}")
             return self.update_existing_metadata(item, date_meta[0]["value"])
         else:
             return self.add_new_metadata(item)
@@ -206,11 +208,16 @@ class additional_stats:
 
     def __init__(self):
         self._titles = defaultdict(int)
+        self._doubles = defaultdict(list)
 
     def update(self, item: dict):
+        uuid = item['uuid']
         dc_titles = item['metadata'].get('dc.title', [])
         if len(dc_titles) > 0:
             self._titles[dc_titles[0]['value']] += 1
+        key = 'dc.date.issued'
+        if len(item['metadata'].get(key, [])) > 1:
+            self._doubles[key].append(uuid)
 
     def print_info(self, show_limit=100):
         duplicates = {k: v for k, v in self._titles.items() if v > 1}
@@ -220,6 +227,10 @@ class additional_stats:
             if i >= show_limit:
                 break
             _logger.info(f"Title [{k}] : {v}")
+        if len(self._doubles) > 0:
+            _logger.info("Multiple values when expecting at most 1:")
+            for k, v in self._doubles.items():
+                _logger.info(f"{k}: {v}")
 
 
 if __name__ == '__main__':
