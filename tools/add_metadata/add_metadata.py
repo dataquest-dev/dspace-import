@@ -58,12 +58,12 @@ class date:
             return False
 
         formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y',
-                   '%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y']
+                   '%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y', '%d. %m. %Y']
         for fmt in formats:
             try:
                 datetime_obj = datetime.strptime(self._d, fmt)
                 # Normalize date to 'YYYY-MM-DD'
-                if fmt in ['%Y-%m', '%Y/%m', '%Y.%m']:
+                if fmt in ['%Y-%m', '%Y/%m', '%Y.%m', '%m-%Y', "%m/%Y", "%m.%Y"]:
                     self._d = datetime_obj.strftime('%Y-%m-01')
                 elif fmt == '%Y':
                     self._d = datetime_obj.strftime('%Y-01-01')
