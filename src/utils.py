@@ -15,15 +15,21 @@ def init_logging(
     os.makedirs(base_log_dir, exist_ok=True)
 
     formatter = logging.Formatter(format)
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
     file_handler.setLevel(file_level)
     logger.addHandler(file_handler)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(console_level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    found_stream = None
+    for h in logger.handlers:
+        if isinstance(h, logging.StreamHandler):
+            found_stream = h
+            break
+    if found_stream is None:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(console_level)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     logger.setLevel(logging.INFO)
 
