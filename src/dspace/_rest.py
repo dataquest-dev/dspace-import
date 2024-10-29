@@ -355,26 +355,37 @@ class rest:
                 return items[:limit]
         return items
 
-    def iter_items(self, page_size: int = 100, limit: int = -1):
+    def iter_items(self, page_size: int = 100, limit: int = -1, uuid: str = None):
         from tqdm import tqdm
 
         url = 'core/items'
         _logger.debug(f"Fetch iter [] using [{url}]")
         page = 0
         len_items = 0
+        item_key = "items"
+        fetch_key = "_embedded"
+
+        if uuid is not None:
+            fetch_key = None
+            url = f"{url}/{uuid}"
+
         with tqdm(desc="Fetching items", unit=" items") as pbar:
             while True:
-                r = self._fetch(url, self.get, "_embedded",
+                r = self._fetch(url, self.get, fetch_key,
                                 params={"page": page, "size": page_size})
                 if r is None:
                     break
-                key = "items"
-                items_data = r.get(key, [])
+                # only one
+                if uuid is not None:
+                    yield [r]
+                    return
+
+                items_data = r.get(item_key, [])
                 if items_data:
                     len_items += len(items_data)
                     yield items_data
                 else:
-                    _logger.warning(f"Key [{key}] does not exist in response: {r}")
+                    _logger.warning(f"Key [{item_key}] does not exist in response: {r}")
                 page += 1
                 pbar.update(len(items_data))
 

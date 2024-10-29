@@ -200,7 +200,7 @@ class updater:
         if date_meta is not None:
             val = date_meta[0]["value"]
             if len(date_meta) != 1:
-                _logger.critical(f"{uuid}: more than one value {date_meta}")
+                _logger.critical(f"{uuid}: other than one value {date_meta}")
                 self._info["multiple"].append(uuid)
                 if not self._dry_run:
                     val = ''
