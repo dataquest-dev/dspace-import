@@ -217,7 +217,6 @@ class updater:
                             continue
                         dspace_be.client.remove_metadata(
                             Item(item), self._to_mtd_field, i)
-
                     # Reload item and metadata
                     item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
             return self.update_existing_metadata(item, val)
