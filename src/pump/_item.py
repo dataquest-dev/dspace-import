@@ -31,7 +31,7 @@ class items:
         }],
     ]
 
-    ignored_mtd_fields = ["bitstream.redirectToURL"]
+    ignored_fields = ["bitstream.redirectToURL"]
 
     def __init__(self,
                  item_file_str: str,
@@ -77,6 +77,7 @@ class items:
             "withdrawn": [],
             "not_imported": [],
         }
+        self._ignored_fields_id = []
 
     def __len__(self):
         return len(self._items)
@@ -120,6 +121,10 @@ class items:
             Mapped tables: item, collection2item, workspaceitem, cwf_workflowitem,
             metadata, handle
         """
+
+        # Convert ignored fields from text to id from v5
+        self._ignored_fields_id = metadatas.get_field_id_from_text(self.ignored_fields)
+
         if "ws" in self._done:
             _logger.info("Skipping workspace import")
         else:
@@ -160,7 +165,7 @@ class items:
             'withdrawn': item['withdrawn']
         }
         i_meta = (metadatas.
-                  value(items.TYPE, i_id, None, True, self.ignored_mtd_fields))
+                  value(items.TYPE, i_id, None, True, self._ignored_fields_id))
         if i_meta is not None:
             data['metadata'] = i_meta
 
@@ -279,7 +284,7 @@ class items:
             }
 
             i_meta = metadatas.value(items.TYPE, i_id, None,
-                                     True, self.ignored_mtd_fields)
+                                     True, self._ignored_fields_id)
             if i_meta:
                 data['metadata'] = i_meta
 

@@ -536,6 +536,17 @@ class metadatas:
             key += '.' + field_js['qualifier']
         return key
 
+    def get_field_id_from_text(self, fields: list):
+        """
+            Check if filtered fields exist
+        """
+        return [
+            field_id
+            for field in fields
+            if (field_id := self._v5_fields_name2id.get(field)) is not None
+            and self.exists_field(field_id)
+        ]
+
     def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True, ignored_mtd_fields: list = None):
         """
             Get metadata value for dspace object.
@@ -552,20 +563,11 @@ class metadatas:
             log_miss(f'Metadata for [{res_id}] are missing in [{res_type_id}] type')
             return None
 
-        # Check if filtered fields exist
-        exist_ignored_mtd_fields = [
-            field_id
-            for field in ignored_mtd_fields
-            if ignored_mtd_fields
-            and (field_id := self._v5_fields_name2id.get(field)) is not None
-            and self.exists_field(field_id)
-        ]
-
         vals = tp_values[res_id]
 
         vals = [x for x in vals
                 if self.exists_field(x['metadata_field_id'])
-                and not (exist_ignored_mtd_fields and any(x['metadata_field_id'] == field for field in exist_ignored_mtd_fields))]
+                and not (ignored_mtd_fields and any(x['metadata_field_id'] == field for field in ignored_mtd_fields))]
 
         if len(vals) == 0:
             return {}
