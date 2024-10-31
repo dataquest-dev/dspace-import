@@ -440,11 +440,11 @@ class rest:
             js = response_to_json(r)
             if r.status_code == 200:
                 # 200 OK - success!
-                _logger.info(f'GET [{url} was successfully!')
+                _logger.info(f'GET [{url}] was successfully!')
                 if key is None:
                     return js
                 if key not in js:
-                    _logger.error(f'Response does not contain key [{key}]!')
+                    _logger.warning(f'Response does not contain key [{key}]!')
                     return None
                 return js[key]
             elif not retry and r.status_code == 401:
