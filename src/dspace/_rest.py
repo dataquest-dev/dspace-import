@@ -434,28 +434,25 @@ class rest:
 
     # =======
 
-    def _fetch(self, url: str, method, key: str, retry=False, **kwargs):
+    def _fetch(self, url: str, method, key: str, re_auth=True, **kwargs):
         try:
             r = method(url, **kwargs)
             js = response_to_json(r)
+
             if r.status_code == 200:
                 # 200 OK - success!
-                _logger.info(f'GET [{url}] was successfully!')
                 if key is None:
                     return js
-                if key not in js:
-                    _logger.warning(f'Response does not contain key [{key}]!')
-                    return None
                 return js[key]
-            elif not retry and r.status_code == 401:
+
+            if re_auth and r.status_code == 401:
                 # 401 Unauthorized
-                logging.warning(
-                    'Authentication failure during _fetch. Try to reauthorize.')
+                logging.debug('Re-authenticating in _fetch')
                 if self.client.authenticate():
-                    return self._fetch(url, method, key, True, **kwargs)
-            else:
-                _logger.error(f'GET [{url}] failed. Status: {r.status_code}]')
-                return None
+                    return self._fetch(url, method, key, re_auth=False, **kwargs)
+
+            _logger.error(f'GET [{url}] failed. Status: {r.status_code}]')
+            return None
         except Exception as e:
             _logger.error(f'GET [{url}] failed. Exception: [{str(e)}]')
         return None
