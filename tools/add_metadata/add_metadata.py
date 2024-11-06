@@ -98,7 +98,7 @@ class updater:
         self._dry_run = dry_run
         self._info = {
             "valid": [],
-            "multiple": [],
+            "multiple": set(),
             "invalid_date": [],
             "invalid_date_all": set(),
             "updated": [],
@@ -201,7 +201,7 @@ class updater:
             val = date_meta[0]["value"]
             if len(date_meta) != 1:
                 _logger.critical(f"{uuid}: other than one value {date_meta}")
-                self._info["multiple"].append(uuid)
+                self._info["multiple"].add(uuid)
                 if not self._dry_run:
                     val = ''
                     for i in range(len(date_meta)):

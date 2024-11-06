@@ -389,7 +389,7 @@ class rest:
                 page += 1
                 pbar.update(len(items_data))
 
-                if len_items > limit > 0:
+                if len_items >= limit > 0:
                     return
 
     def put_ws_item(self, param: dict, data: dict):
@@ -435,6 +435,7 @@ class rest:
     # =======
 
     def _fetch(self, url: str, method, key: str, re_auth=True, **kwargs):
+        r = None
         try:
             r = method(url, **kwargs)
             js = response_to_json(r)
@@ -454,7 +455,13 @@ class rest:
             _logger.error(f'GET [{url}] failed. Status: {r.status_code}]')
             return None
         except Exception as e:
-            _logger.error(f'GET [{url}] failed. Exception: [{str(e)}]')
+            detail = ""
+            if r is not None:
+                try:
+                    detail = r.content.decode('utf-8')
+                except Exception:
+                    pass
+            _logger.error(f'GET [{url}] failed. Exception: [{str(e)}] [{detail}]')
         return None
 
     def _put(self, url: str, arr: list, params: list = None):

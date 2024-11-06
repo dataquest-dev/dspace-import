@@ -1,0 +1,13 @@
+{
+  "must_exist": [
+    "dc.identifier.uri"
+  ],
+
+  "unique": [
+    "dc.title"
+  ],
+
+  "date": [
+    "dc.date.issued"
+  ]
+}
