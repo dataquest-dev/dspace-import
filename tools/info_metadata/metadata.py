@@ -150,8 +150,10 @@ class stats:
                 ok += 1
                 continue
             not_ok += 1
-            if not_ok > show_limit:
-                _logger.info(f"  ... showing only {show_limit} items")
+            if not_ok >= show_limit:
+                # print only once
+                if not_ok == show_limit:
+                    _logger.info(f"  ... showing only {show_limit} items")
             else:
                 _logger.info(f"  {key}: {value}")
         _logger.info(f"Unique keys [OK]: {ok}")
