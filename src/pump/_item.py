@@ -31,7 +31,7 @@ class items:
         }],
     ]
 
-    ignored_fields = ["dc.bitstream.redirectToURL"]
+    ignored_fields = ["local.bitstream.redirectToURL"]
 
     def __init__(self,
                  item_file_str: str,
@@ -77,7 +77,6 @@ class items:
             "withdrawn": [],
             "not_imported": [],
         }
-        self._ignored_fields_id = []
 
     def __len__(self):
         return len(self._items)
@@ -121,7 +120,6 @@ class items:
             Mapped tables: item, collection2item, workspaceitem, cwf_workflowitem,
             metadata, handle
         """
-
         if "ws" in self._done:
             _logger.info("Skipping workspace import")
         else:
