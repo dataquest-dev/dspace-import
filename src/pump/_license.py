@@ -1,6 +1,5 @@
 import os
 import logging
-
 from pump._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.license")
@@ -69,7 +68,7 @@ class licenses:
     def imported_licenses(self):
         return self._imported['licenses']
 
-    def import_to(self, env, dspace, epersons = None):
+    def import_to(self, env, dspace, epersons=None):
         self._import_license_labels(env, dspace)
         self._import_license_defs(env, dspace, epersons)
 

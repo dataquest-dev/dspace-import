@@ -43,7 +43,8 @@ if __name__ == '__main__':
     )
 
     _logger.info("Loading license import")
-    licenses_imp = licenses(os.path.join(args.input, 'labels.json'), os.path.join(args.input, 'licenses.json'), os.path.join(args.input, 'mapping.json'))
+    licenses_imp = licenses(os.path.join(args.input, 'labels.json'), os.path.join(
+        args.input, 'licenses.json'), os.path.join(args.input, 'mapping.json'))
 
     # import licenses
     _logger.info("Start license import")

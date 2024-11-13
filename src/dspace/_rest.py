@@ -244,8 +244,8 @@ class rest:
     # =======
 
     def fetch_licenses(self):
-        url ='core/clarinlicenses'
-        _logger.debug(f"Fatch [] using [{url}]")
+        url = 'core/clarinlicenses'
+        _logger.debug(f"Fetch [] using [{url}]")
         page = 0
         licenses = []
         while True:

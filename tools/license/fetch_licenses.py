@@ -42,15 +42,18 @@ def filter_licenses(all_licenses, no_definition):
         if key in license and not any(arg in license[key] for arg in no_definition_set)
     ]
 
+
 def write_data_to_file(data, output_path):
     """Write the filtered data to a JSON file."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)  # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_path),
+                exist_ok=True)  # Ensure output directory exists
     with open(output_path, 'w', encoding='utf-8') as fout:
         json.dump(data, fout, indent=2)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Get DSpace licenses that meet condition.")
+    parser = argparse.ArgumentParser(
+        description="Get DSpace licenses that meet condition.")
     parser.add_argument("--no_definition", type=str, nargs='+', required=True,
                         help="String that cannot be part of the license definition")
     parser.add_argument('--output', type=str,
@@ -100,9 +103,12 @@ if __name__ == '__main__':
 
     _logger.info(f"Number of filtered licenses: {len(filtered_licenses)}")
     _logger.info(f"Number of filtered license labels: {len(filtered_license_labels)}")
-    _logger.info(f"Number of filtered license extended mapping: {len(filtered_ext_mapping)}")
+    _logger.info(
+        f"Number of filtered license extended mapping: {len(filtered_ext_mapping)}")
 
     # Write the filtered data to the specified output file
-    write_data_to_file([license.to_dict() for license in filtered_licenses], os.path.join(args.output, 'licenses.json'))
-    write_data_to_file([license.to_dict() for license in filtered_license_labels], os.path.join(args.output, 'labels.json'))
+    write_data_to_file([license.to_dict() for license in filtered_licenses],
+                       os.path.join(args.output, 'licenses.json'))
+    write_data_to_file([license.to_dict() for license in filtered_license_labels],
+                       os.path.join(args.output, 'labels.json'))
     write_data_to_file(filtered_ext_mapping, os.path.join(args.output, 'mapping.json'))
