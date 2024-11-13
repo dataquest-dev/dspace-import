@@ -538,9 +538,9 @@ class metadatas:
 
     def filter_res_d(self, res_d, ignored_mtd_fields):
         """
-            Filter the resulting res_d dictionary based on custom conditions.
+            Filter the resulting res_d dictionary based on custom ignored metadata fields.
         """
-        return {key: val for key, val in res_d.items() if key not in ignored_mtd_fields}
+        return {key: val for key, val in res_d.items() if res_d is not None and key not in ignored_mtd_fields}
 
     def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True):
         """
