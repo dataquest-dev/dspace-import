@@ -536,18 +536,13 @@ class metadatas:
             key += '.' + field_js['qualifier']
         return key
 
-    def get_field_id_from_text(self, fields: list):
+    def filter_res_d(self, res_d, ignored_mtd_fields):
         """
-            Check if filtered fields exist
+            Filter the resulting res_d dictionary based on custom conditions.
         """
-        return [
-            field_id
-            for field in fields
-            if (field_id := self._v5_fields_name2id.get(field)) is not None
-            and self.exists_field(field_id)
-        ]
+        return {key: val for key, val in res_d.items() if key not in ignored_mtd_fields}
 
-    def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True, ignored_mtd_fields: list = None):
+    def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True):
         """
             Get metadata value for dspace object.
         """
@@ -564,10 +559,7 @@ class metadatas:
             return None
 
         vals = tp_values[res_id]
-
-        vals = [x for x in vals
-                if self.exists_field(x['metadata_field_id'])
-                and not (ignored_mtd_fields and any(x['metadata_field_id'] == field for field in ignored_mtd_fields))]
+        vals = [x for x in vals if self.exists_field(x['metadata_field_id'])]
 
         if len(vals) == 0:
             return {}
