@@ -559,8 +559,8 @@ class metadatas:
             return None
 
         vals = tp_values[res_id]
-        vals = [x for x in vals if self.exists_field(x['metadata_field_id'])]
 
+        vals = [x for x in vals if self.exists_field(x['metadata_field_id'])]
         if len(vals) == 0:
             return {}
 
