@@ -25,6 +25,8 @@ _logger = logging.getLogger()
 env = update_settings(settings.env, project_settings.settings)
 init_logging(_logger, env["log_file"])
 
+from _cache import cache
+
 
 class stats:
 
@@ -172,6 +174,49 @@ class stats:
         _logger.info(f"  {self.bitstreams[stats.key_invalid][:show_limit]}...")
 
 
+class iterator:
+
+    def __init__(self, dspace_be=None, cacher=None):
+        self._cacher = cacher
+        self._dspace_be = dspace_be
+        self._len_all = 0
+
+    @property
+    def len_all(self):
+        return self._len_all
+
+    def iter_cache(self):
+        for item, bitstreams in self._cacher.iter_items():
+            self._len_all += 1
+            yield item, bitstreams
+
+    def iter_be(self):
+        for items in self._dspace_be.iter_items():
+            self._len_all += len(items)
+            items = [item for item in items if not item['withdrawn'] and item['inArchive']]
+            for item in items:
+                bitstreams = None
+                if args.fetch_bitstreams:
+                    try:
+                        uuid = item['uuid']
+                        dso = Item(item)
+                        bundles = dspace_be.client.get_bundles(parent=dso, size=100)
+                        bitstreams = []
+                        for bundle in bundles:
+                            bitstreams.extend(dspace_be.client.get_bitstreams(
+                                bundle=bundle, size=100))
+                    except Exception as e:
+                        _logger.error(
+                            f"Error getting bitstreams for item {item['uuid']}: {e}")
+                yield item, bitstreams
+
+    def items(self):
+        iter = self.iter_be if self._cacher is None \
+            else self.iter_cache
+        for item, bitstreams in iter():
+            yield item, bitstreams
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Add metadata for DSpace items")
     parser.add_argument("--endpoint", type=str, default=env["backend"]["endpoint"])
@@ -179,6 +224,10 @@ if __name__ == '__main__':
     parser.add_argument("--password", type=str, default=env["backend"]["password"])
     parser.add_argument("--spec", type=str, default=os.path.join(_this_dir, "spec.json"))
     parser.add_argument("--fetch-bitstreams", action="store_true", default=False)
+    parser.add_argument("--cache-create", action="store_true", default=False)
+    parser.add_argument("--cache-use", action="store_true", default=False)
+    parser.add_argument("--cache-dir", type=str,
+                        default=os.path.join(_this_dir, "__cache"))
     args = parser.parse_args()
     _logger.info(f"Arguments: {args}")
 
@@ -187,37 +236,29 @@ if __name__ == '__main__':
         sys.exit(1)
 
     start = time.time()
-    dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
+    auth = args.cache_use is False
+    dspace_be = dspace.rest(args.endpoint, args.user, args.password, auth)
 
     with open(args.spec, "r", encoding="utf-8") as f:
         spec = json.load(f)
     statser = stats(spec)
+    cacher = cache(dir=args.cache_dir, load=args.cache_use)
+    if args.cache_create:
+        cacher.add_info("args", vars(args))
+        cacher.validate_save()
 
-    len_all_items = 0
-    lem_processed_items = 0
-    for items in dspace_be.iter_items():
-        len_all_items += len(items)
-        items = [item for item in items if not item['withdrawn'] and item['inArchive']]
-        for item in items:
-            bitstreams = None
-            if args.fetch_bitstreams:
-                try:
-                    uuid = item['uuid']
-                    dso = Item(item)
-                    bundles = dspace_be.client.get_bundles(parent=dso, size=100)
-                    bitstreams = []
-                    for bundle in bundles:
-                        bitstreams.extend(dspace_be.client.get_bitstreams(
-                            bundle=bundle, size=100))
-                except Exception as e:
-                    _logger.error(
-                        f"Error getting bitstreams for item {item['uuid']}: {e}")
-            statser.update(item, bitstreams)
+    iter = iterator(dspace_be, cacher if args.cache_use else None)
+    len_processed_items = 0
+    for item, bitstreams in iter.items():
+        statser.update(item, bitstreams)
+        if args.cache_create:
+            cacher.add(item, bitstreams)
+    cacher.serialize()
 
     _logger.info(40 * "=")
     statser.print_info()
     _logger.info(40 * "=")
-    _logger.info(f"Total items: {len_all_items}  Processed items: [{len(statser)}]")
+    _logger.info(f"Total items: {iter.len_all}  Processed items: [{len(statser)}]")
     took = time.time() - start
     nice_took = time.strftime("%H:%M:%S", time.gmtime(took))
     _logger.info(f"Total time: {took:.2f} s [{nice_took}]")
