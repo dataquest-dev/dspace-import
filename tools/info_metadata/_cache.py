@@ -66,10 +66,20 @@ class cache:
         }
 
     def deserialize(self):
+        try:
+            import orjson
+            has_orjson = True
+        except Exception:
+            has_orjson = False
+
+        _logger.info(f"Loading {self._file}, has_orjson:{has_orjson}")
         with open(self._file, "r") as f:
-            d = json.load(f)
+            if has_orjson:
+                d = orjson.loads(f.read())  # noqa
+            else:
+                d = json.load(f)
         _logger.info(
-            f"Loaded {self._file} from {d['timestamp']}, {len(d['data'])} items, {len(d['info'])} info.")
+            f"Loaded {self._file} from {d['timestamp']}, {len(d['data'])} items, [{d['info']}] info.")
         self._data = d["data"]
         for k, v in self._data.items():
             for i, b in enumerate(v["bitstreams"]):
@@ -84,4 +94,4 @@ class cache:
             "info": self._info,
         }
         with open(self._file, "w") as fout:
-            json.dump(d, fout, indent=1, sort_keys=True)
+            json.dump(d, fout, indent=0, sort_keys=True)

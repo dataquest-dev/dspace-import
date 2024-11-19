@@ -6,6 +6,7 @@ import os
 import sys
 import json
 from collections import defaultdict
+import tqdm
 
 # Set up directories for imports
 _this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,11 +41,15 @@ class stats:
     key_format = "format"
     key_other = "other"
     key_bitstreams = "bitstreams"
+    key_counts_gt_1 = "counts_gt_1"
 
     def_date_recs = {
         "yyyy": re.compile(r"^\d{4}$"),
         "yyyy-mm": re.compile(r"^\d{4}-\d{2}$"),
         "yyyy-mm-dd": re.compile(r"^\d{4}-\d{2}-\d{2}$"),
+        "yyyy-m-d": re.compile(r"^\d{4}-\d{1}-\d{1}$"),
+        "yyyy-mm-d": re.compile(r"^\d{4}-\d{2}-\d{1}$"),
+        "yyyy-m-dd": re.compile(r"^\d{4}-\d{1}-\d{2}$"),
     }
 
     def __init__(self, spec: dict):
@@ -67,10 +72,18 @@ class stats:
             stats.key_bitstreams: {
                 stats.key_invalid: [],
             },
+            stats.key_counts_gt_1: {
+            }
         }
         # make sure date format keys are present
         for key in stats.def_date_recs.keys():
             self._info[stats.key_dates][stats.key_format][key] = 0
+
+        for key in self._spec[stats.key_counts_gt_1]:
+            # multiple fields can be used as one key
+            if isinstance(key, list):
+                key = "|".join(key)
+            self._info[stats.key_counts_gt_1][key] = defaultdict(int)
 
     def __len__(self):
         return self._len
@@ -131,7 +144,20 @@ class stats:
                 if not found:
                     self.dates[stats.key_format]["other"].append(m_val)
 
-    def print_info(self, show_limit: int = 25):
+        for key in self._spec[stats.key_counts_gt_1]:
+            if isinstance(key, list):
+                d_key = "|".join(key)
+                vals = []
+                for k in key:
+                    metas = sorted([m['value'] for m in meta.get(k, [])])
+                    vals.append("|".join(metas))
+                meta_key = "|".join(vals)
+                self._info[stats.key_counts_gt_1][d_key][meta_key] += 1
+            else:
+                for m in meta.get(key, []):
+                    self._info[stats.key_counts_gt_1][key][m['value']] += 1
+
+    def print_info(self, show_limit: int = 15):
         _logger.info(f"Total items: {self._len} total bitstreams: {self._bitstream_len}")
         _logger.info("Must exist keys [MISSING]:")
         for key, value in self.must_exist[stats.key_missing].items():
@@ -163,15 +189,30 @@ class stats:
         _logger.info("-----")
         _logger.info("Date keys [FORMATS]:")
         for key, value in self.dates[stats.key_format].items():
-            _logger.info(f"  {key}: {value}")
+            _logger.info(f"  {key:12s}: {value}")
         _logger.info("Date keys [LENS]:")
         for key, value in self.dates[stats.key_lens].items():
-            _logger.info(f"  {key}: {value}")
+            _logger.info(f"  {key:5d}: {value}")
+
+        _logger.info("-----")
+        _logger.info("Counts > 1:")
+        for meta_key, meta_counts in self._info[stats.key_counts_gt_1].items():
+            _logger.info(f"  {meta_key}: {len(meta_counts)}")
+            suspicious = 0
+            for k, v in meta_counts.items():
+                if v <= 1:
+                    continue
+                if suspicious < show_limit:
+                    _logger.info(f"    {k}: {v}")
+                suspicious += 1
+            if show_limit <= suspicious:
+                _logger.info(
+                    f"    ... showing only {show_limit} items, total>1 [{suspicious}]")
 
         _logger.info("-----")
         _logger.info(
             f"Invalid bitstream names: [{len(self.bitstreams[stats.key_invalid])}]")
-        _logger.info(f"  {self.bitstreams[stats.key_invalid][:show_limit]}...")
+        _logger.info(f"  {self.bitstreams[stats.key_invalid][:(show_limit // 4)]}...")
 
 
 class iterator:
@@ -236,20 +277,21 @@ if __name__ == '__main__':
         sys.exit(1)
 
     start = time.time()
-    auth = args.cache_use is False
-    dspace_be = dspace.rest(args.endpoint, args.user, args.password, auth)
+    dspace_be = None
+    if args.cache_use is False:
+        dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
 
     with open(args.spec, "r", encoding="utf-8") as f:
         spec = json.load(f)
     statser = stats(spec)
     cacher = cache(dir=args.cache_dir, load=args.cache_use)
     if args.cache_create:
-        cacher.add_info("args", vars(args))
+        cacher.add_info("args", dict(vars(args), password=None))
         cacher.validate_save()
 
     iter = iterator(dspace_be, cacher if args.cache_use else None)
     len_processed_items = 0
-    for item, bitstreams in iter.items():
+    for item, bitstreams in tqdm.tqdm(iter.items()):
         statser.update(item, bitstreams)
         if args.cache_create:
             cacher.add(item, bitstreams)
