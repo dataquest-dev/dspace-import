@@ -3,7 +3,7 @@
 This script retrieves all licenses, labels, and mappings from DSpace that meet the defined conditions and returns them in JSON format.
 
 ```
-python ferch_licenses.py --no_definition dev-5.pc:85 --output data
+python fetch_licenses.py --no_definition dev-5.pc:85 --output data
 ```
 
 # import_licenses.py
