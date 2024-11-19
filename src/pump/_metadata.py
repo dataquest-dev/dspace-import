@@ -536,6 +536,12 @@ class metadatas:
             key += '.' + field_js['qualifier']
         return key
 
+    def filter_res_d(self, res_d, ignored_mtd_fields):
+        """
+            Filter the resulting res_d dictionary based on custom ignored metadata fields.
+        """
+        return {key: val for key, val in (res_d or {}).items() if key not in ignored_mtd_fields}
+
     def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True):
         """
             Get metadata value for dspace object.
