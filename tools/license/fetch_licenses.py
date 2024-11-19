@@ -28,32 +28,29 @@ init_logging(_logger, env["log_file"])
 class LicenseProcessor:
     """Class to handle DSpace license retrieval, filtering, and output."""
 
-    def __init__(self, dspace_backend, no_definition, output_dir):
+    def __init__(self, dspace_backend, no_definition):
         """
         Initialize LicenseProcessor with the DSpace backend and settings.
 
         :param dspace_backend: The DSpace backend instance for fetching data.
         :param no_definition: List of strings that cannot be part of the license definition.
-        :param output_dir: The directory to save the output JSON files.
         """
-        self.dspace_backend = dspace_backend
-        self.no_definition = set(no_definition)
-        self.output_dir = output_dir
+        self._dspace_ba = dspace_backend
+        self._no_definition = set(no_definition)
 
-    def fetch_licenses(self, dspace_be):
+    def fetch_licenses(self):
         """Fetch licenses from DSpace backend."""
-        all_licenses = dspace_be.fetch_licenses()
+        all_licenses = self._dspace_be.fetch_licenses()
         _logger.info(f"Number of fetched licenses: {len(all_licenses)}")
         return all_licenses
 
-    def filter_licenses(self, all_licenses, no_definition):
+    def filter_licenses(self, all_licenses):
         """Filter licenses based on the no_definition criteria."""
         key = "definition"
-        no_definition_set = set(no_definition)
         return [
             License(license)
             for license in all_licenses
-            if key in license and not any(arg in license[key] for arg in no_definition_set)
+            if key in license and not any(arg in license[key] for arg in self._no_definition)
         ]
 
     def collect_license_labels(self, filtered_licenses):
@@ -112,11 +109,11 @@ if __name__ == '__main__':
     )
 
     # Create LicenseProcessor instance and process the licenses
-    processor = LicenseProcessor(dspace_be, args.no_definition, args.output)
+    processor = LicenseProcessor(dspace_be, args.no_definition)
 
     # Fetch and filter licenses
-    all_licenses = processor.fetch_licenses(dspace_be)
-    filtered_licenses = processor.filter_licenses(all_licenses, args.no_definition)
+    all_licenses = processor.fetch_licenses()
+    filtered_licenses = processor.filter_licenses(all_licenses)
 
     # Collect unique license labels and extended mappings
     filtered_license_labels = processor.collect_license_labels(filtered_licenses)
