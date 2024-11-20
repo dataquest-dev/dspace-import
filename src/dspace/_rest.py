@@ -243,6 +243,25 @@ class rest:
 
     # =======
 
+    def fetch_licenses(self):
+        url = 'core/clarinlicenses'
+        _logger.debug(f"Fetch [] using [{url}]")
+        page = 0
+        licenses = []
+        while True:
+            r = self._fetch(url, self.get, "_embedded",
+                            params={"page": page, "size": 100})
+            if r is None:
+                break
+            key = "clarinlicenses"
+            licenses_data = r.get(key, [])
+            if licenses_data:
+                licenses.extend(licenses_data)
+            else:
+                _logger.warning(f"Key [{key}] does not exist in response: {r}")
+            page += 1
+        return licenses
+
     def put_license_label(self, data: dict):
         url = 'core/clarinlicenselabels'
         _logger.debug(f"Importing [{data}] using [{url}]")
