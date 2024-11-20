@@ -35,7 +35,7 @@ class LicenseProcessor:
         :param dspace_backend: The DSpace backend instance for fetching data.
         :param no_definition: List of strings that cannot be part of the license definition.
         """
-        self._dspace_ba = dspace_backend
+        self._dspace_be = dspace_backend
         self._no_definition = set(no_definition)
 
     def fetch_licenses(self):
@@ -44,7 +44,7 @@ class LicenseProcessor:
         _logger.info(f"Number of fetched licenses: {len(all_licenses)}")
         return all_licenses
 
-    def filter_licenses(self, all_licenses):
+    def filter_licenses(self, all_licenses: list):
         """Filter licenses based on the no_definition criteria."""
         key = "definition"
         return [
@@ -53,28 +53,27 @@ class LicenseProcessor:
             if key in license and not any(arg in license[key] for arg in self._no_definition)
         ]
 
-    def collect_license_labels(self, filtered_licenses):
+    def collect_license_labels(self, filtered_licenses: list):
         """Collect unique license labels and extended license mappings."""
         added_ids = set()
         filtered_license_labels = []
 
         for license in filtered_licenses:
-            # Function to add labels if they're unique
-            def add_unique_label(label):
-                if label and label.id not in added_ids:
-                    added_ids.add(label.id)
-                    filtered_license_labels.append(label)
-
             # Add the primary license label
-            add_unique_label(license.licenseLabel)
+            label = license.licenseLabel
+            if label and label.id not in added_ids:
+                added_ids.add(label.id)
+                filtered_license_labels.append(label)
 
             # Add extended license labels
             for ext in license.extendedLicenseLabel or []:
-                add_unique_label(ext)
+                if ext and ext.id not in added_ids:
+                    added_ids.add(ext.id)
+                    filtered_license_labels.append(ext)
 
         return filtered_license_labels
 
-    def create_license_mapping(self, filtered_licenses):
+    def create_license_mapping(self, filtered_licenses: list):
         """Create extended license mappings."""
         return [
             {'license_id': license.id, 'label_id': ext.id}
@@ -82,12 +81,13 @@ class LicenseProcessor:
             for ext in license.extendedLicenseLabel or []
         ]
 
-    def write_data_to_file(self, data: list, output_path: str):
-        """Write the filtered data to a JSON file."""
-        os.makedirs(os.path.dirname(output_path),
-                    exist_ok=True)  # Ensure output directory exists
-        with open(output_path, 'w', encoding='utf-8') as fout:
-            json.dump(data, fout, indent=2, sort_keys=True)
+
+def write_data_to_file(data: list, output_path: str):
+    """Write the filtered data to a JSON file."""
+    os.makedirs(os.path.dirname(output_path),
+                exist_ok=True)  # Ensure output directory exists
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, sort_keys=True)
 
 
 if __name__ == '__main__':
@@ -130,9 +130,9 @@ if __name__ == '__main__':
         f"Number of filtered license extended mapping: {len(filtered_ext_mapping)}")
 
     # Write the filtered data to the specified output file
-    processor.write_data_to_file([license.to_dict() for license in filtered_licenses],
-                                 os.path.join(args.output, 'licenses.json'))
-    processor.write_data_to_file([license.to_dict() for license in filtered_license_labels],
-                                 os.path.join(args.output, 'labels.json'))
-    processor.write_data_to_file(
+    write_data_to_file([license.to_dict() for license in filtered_licenses],
+                       os.path.join(args.output, 'licenses.json'))
+    write_data_to_file([license.to_dict() for license in filtered_license_labels],
+                       os.path.join(args.output, 'labels.json'))
+    write_data_to_file(
         filtered_ext_mapping, os.path.join(args.output, 'mapping.json'))
