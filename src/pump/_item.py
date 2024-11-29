@@ -279,7 +279,7 @@ class items:
             }
 
             i_meta = metadatas.filter_res_d(metadatas.value(
-                items.TYPE, i_id, None, True, self.ignored_fields))
+                items.TYPE, i_id, None, True), self.ignored_fields)
             if i_meta:
                 data['metadata'] = i_meta
 
