@@ -60,7 +60,7 @@ class checker:
         logging.error(f"Url {url} doesn't contains pattern {pattern}!")
         return None
 
-    def get_bitstream_name(self, uuid):
+    def get_bitstream_name(self, uuid: str) -> str:
         """
         Fetch the bitstream name from the DSpace backend using the UUID.
         """
