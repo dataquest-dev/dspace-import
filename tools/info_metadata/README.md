@@ -16,3 +16,10 @@ and then
 ```
 python metadata.py --cache-use
 ```
+
+
+## Get all titles from cache
+
+```
+jq -r ".data[] | .bitstreams[] | .metadata.\"dc.title\"[] | .value" __cache\ZCU.metadata.json  > bitstream.titles.txt
+```
