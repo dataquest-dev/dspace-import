@@ -1,6 +1,6 @@
 import os
 import logging
-from ._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
+from pump._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.license")
 
@@ -68,7 +68,7 @@ class licenses:
     def imported_licenses(self):
         return self._imported['licenses']
 
-    def import_to(self, env, dspace, epersons):
+    def import_to(self, env, dspace, epersons=None):
         self._import_license_labels(env, dspace)
         self._import_license_defs(env, dspace, epersons)
 
@@ -143,7 +143,9 @@ class licenses:
             if lic_id in self._license2label:
                 data['extendedClarinLicenseLabels'] = self._license2label[lic_id]
 
-            params = {'eperson': epersons.uuid(lic['eperson_id'])}
+            params = {}
+            if epersons:
+                params = {'eperson': epersons.uuid(lic['eperson_id'])}
             try:
                 resp = dspace.put_license(params, data)
                 self._imported["licenses"] += 1
