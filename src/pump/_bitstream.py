@@ -24,6 +24,8 @@ class bitstreams:
 
     ]
 
+    ignored_fields = ["local.bitstream.redirectToURL"]
+
     def __init__(self, bitstream_file_str: str, bundle2bitstream_file_str: str):
         self._bs = read_json(bitstream_file_str)
         self._bundle2bs = read_json(bundle2bitstream_file_str)
@@ -168,8 +170,8 @@ class bitstreams:
                     _logger.error(f'add_checksums failed: [{str(e)}]')
 
             data = {}
-            b_meta = metadatas.value(bitstreams.TYPE, b_id,
-                                     log_missing=b_deleted is False)
+            b_meta = metadatas.filter_res_d(metadatas.value(
+                bitstreams.TYPE, b_id, log_missing=b_deleted is False), self.ignored_fields)
             if b_meta is not None:
                 data['metadata'] = b_meta
             else:
