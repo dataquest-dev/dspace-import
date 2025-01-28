@@ -542,6 +542,12 @@ class metadatas:
         """
         return {key: val for key, val in (res_d or {}).items() if key not in ignored_mtd_fields}
 
+    def replace_meta_val(self, res_d, replace_d):
+        """
+        Replace the mtd field in res_d with corresponding values from replace_d if the key exists in replace_d.
+        """
+        return {key: replace_d.get(key, val) for key, val in (res_d or {}).items()}
+
     def value(self, res_type_id: int, res_id: int, text_for_field_id: int = None, log_missing: bool = True):
         """
             Get metadata value for dspace object.
