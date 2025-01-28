@@ -31,8 +31,6 @@ class items:
         }],
     ]
 
-    ignored_fields = ["local.bitstream.redirectToURL"]
-
     def __init__(self,
                  item_file_str: str,
                  ws_file_str: str,
@@ -159,8 +157,8 @@ class items:
             'lastModified': item['last_modified'],
             'withdrawn': item['withdrawn']
         }
-        i_meta = metadatas.filter_res_d(metadatas.value(
-            items.TYPE, i_id, None, True), self.ignored_fields)
+        i_meta = metadatas.value(
+            items.TYPE, i_id, None, True)
         if i_meta is not None:
             data['metadata'] = i_meta
 
