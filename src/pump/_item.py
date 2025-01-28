@@ -31,6 +31,8 @@ class items:
         }],
     ]
 
+    replaced_fields = {'local.hasMetadata': 'local.hasCMDI'}
+
     def __init__(self,
                  item_file_str: str,
                  ws_file_str: str,
@@ -157,8 +159,8 @@ class items:
             'lastModified': item['last_modified'],
             'withdrawn': item['withdrawn']
         }
-        i_meta = metadatas.value(
-            items.TYPE, i_id, None, True)
+        i_meta = metadatas.replace_meta_val(metadatas.value(
+            items.TYPE, i_id, None, True), self.replaced_fields)
         if i_meta is not None:
             data['metadata'] = i_meta
 
