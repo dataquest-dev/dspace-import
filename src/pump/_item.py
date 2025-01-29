@@ -278,8 +278,8 @@ class items:
                 'withdrawn': item['withdrawn']
             }
 
-            i_meta = metadatas.filter_res_d(metadatas.value(
-                items.TYPE, i_id, None, True), self.ignored_fields)
+            i_meta = metadatas.replace_meta_val(metadatas.value(
+                items.TYPE, i_id, None, True), self.replaced_fields)
             if i_meta:
                 data['metadata'] = i_meta
 
