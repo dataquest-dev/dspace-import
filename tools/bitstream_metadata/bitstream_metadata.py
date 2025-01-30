@@ -20,8 +20,11 @@ _logger = logging.getLogger()
 env = update_settings(settings.env, project_settings.settings)
 init_logging(_logger, env["log_file"])
 
-
-class getter:
+"""
+Check the size of bitstreams in a DSpace backend based on a list of UUIDs for bitstreams.
+Log bitstreams with size of 0.
+"""
+class checker:
     def __init__(self, dsapce_be, data_path: str, cache_create: bool, cache_use: bool, cache_dir: str):
         """
         Initialize the checker class with DSpace backend, data path, and URL keys.
@@ -51,7 +54,7 @@ class getter:
             url = f'core/bitstreams/{uuid}'
             resp = dspace_be._fetch(url, dspace_be.get, None)
         if not resp:
-            logging.error("None response!")
+            logging.error(f"No response for {url}!")
             return None
         self._cache[uuid] = resp
         key = 'sizeBytes'
@@ -86,7 +89,7 @@ class getter:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Check url")
+    parser = argparse.ArgumentParser(description="Check sizeBytes of bitstreams")
     parser.add_argument("--endpoint", type=str, default=env["backend"]["endpoint"])
     parser.add_argument("--user", type=str, default=env["backend"]["user"])
     parser.add_argument("--password", type=str, default=env["backend"]["password"])
@@ -103,6 +106,6 @@ if __name__ == '__main__':
 
     # Initialize DSpace backend
     dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
-    bitstreamGetter = getter(dspace_be, os.path.join(
+    bitstream_checker = checker(dspace_be, os.path.join(
         args.input_dir, args.JSON_name), args.cache_create, args.cache_use, args.cache_dir)
-    bitstreamGetter.check_json()
+    bitstream_checker.check_json()

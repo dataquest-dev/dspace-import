@@ -2,6 +2,11 @@ import os
 import json
 
 if __name__ == '__main__':
+    """
+    Loads a JSON file containing bitstream metadata, 
+    filters out the bitstream UUIDs and sizes and saves the results into two JSONs: 
+    all bitstream sizes and only the bitstreams having a size of 0.
+    """
     # Load the JSON data from a file
     with open(os.path.join('data', 'metadata.json'), 'r', encoding='utf-8') as file:
         data = json.load(file)
