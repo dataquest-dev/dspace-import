@@ -546,7 +546,7 @@ class metadatas:
         """
         Replace the mtd field in res_d with corresponding values from replace_d if the key exists in replace_d.
         """
-        for old_key, val in list(res_d.items()):
+        for old_key, val in list((res_d or {}).items()):
             if old_key in replace_d:
                 res_d[replace_d[old_key]] = res_d.pop(old_key)
         return res_d
