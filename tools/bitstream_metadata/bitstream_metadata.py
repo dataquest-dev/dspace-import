@@ -27,7 +27,7 @@ Log bitstreams with size of 0.
 class checker:
     def __init__(self, dsapce_be, data_path: str, cache_create: bool, cache_use: bool, cache_dir: str):
         """
-        Initialize the checker class with DSpace backend, data path, and URL keys.
+        Initialize the checker class.
         """
         self._dspace_be = dsapce_be
         self._data = read_json(data_path)
