@@ -289,6 +289,7 @@ if __name__ == "__main__":
         repo.resourcepolicies.import_to(env, dspace_be, repo)
         repo.resourcepolicies.serialize(cache_file)
     repo.diff(repo.resourcepolicies)
+    repo.test(repo.resourcepolicies)
     _logger.info(import_sep)
 
     # migrate sequences
