@@ -26,6 +26,17 @@ class bitstreams:
 
     ignored_fields = ["local.bitstream.redirectToURL"]
 
+    test_table = [
+        {
+            "name": "bitstream_ignored_fields",
+            "left": ["sql", "db7", "one", "select count(*) from metadatavalue "
+                                   "where metadata_field_id in "
+                                   "(select metadata_field_id from metadatafieldregistry "
+                                   "where qualifier = 'redirectToURL')"],
+            "right": ["val", 0]
+        }
+    ]
+
     def __init__(self, bitstream_file_str: str, bundle2bitstream_file_str: str):
         self._bs = read_json(bitstream_file_str)
         self._bundle2bs = read_json(bundle2bitstream_file_str)
