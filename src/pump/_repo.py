@@ -23,7 +23,7 @@ from ._bundle import bundles
 from ._bitstream import bitstreams
 from ._resourcepolicy import resourcepolicies
 from ._usermetadata import usermetadatas
-from ._db import db, differ
+from ._db import db, differ, tester
 from ._sequences import sequences
 
 _logger = logging.getLogger("pump.repo")
@@ -38,13 +38,13 @@ def export_table(db, table_name: str, out_f: str):
 class repo:
     @time_method
     def __init__(self, env: dict, dspace):
-
         self.raw_db_dspace_5 = db(env["db_dspace_5"])
         self.raw_db_utilities_5 = db(env["db_utilities_5"])
 
-        # remove directory
-        if os.path.exists(env["input"]["tempdbexport"]):
-            shutil.rmtree(env["input"]["tempdbexport"])
+        if not env["tempdb"]:
+            # remove directory
+            if os.path.exists(env["input"]["tempdbexport"]):
+                shutil.rmtree(env["input"]["tempdbexport"])
 
         tables_db_5 = [x for arr in self.raw_db_dspace_5.all_tables() for x in arr]
         tables_utilities_5 = [x for arr in self.raw_db_utilities_5.all_tables()
@@ -54,14 +54,15 @@ class repo:
             """ Dynamically export the table to json file and return path to it. """
             os.makedirs(env["input"]["tempdbexport"], exist_ok=True)
             out_f = os.path.join(env["input"]["tempdbexport"], f"{table_name}.json")
-            if table_name in tables_db_5:
-                db = self.raw_db_dspace_5
-            elif table_name in tables_utilities_5:
-                db = self.raw_db_utilities_5
-            else:
-                _logger.warning(f"Table [{table_name}] not found in db.")
-                raise NotImplementedError(f"Table [{table_name}] not found in db.")
-            export_table(db, table_name, out_f)
+            if not env["tempdb"]:
+                if table_name in tables_db_5:
+                    db = self.raw_db_dspace_5
+                elif table_name in tables_utilities_5:
+                    db = self.raw_db_utilities_5
+                else:
+                    _logger.warning(f"Table [{table_name}] not found in db.")
+                    raise NotImplementedError(f"Table [{table_name}] not found in db.")
+                export_table(db, table_name, out_f)
             return out_f
 
         # load groups
@@ -171,6 +172,21 @@ class repo:
         diff = differ(self.raw_db_dspace_5, self.raw_db_utilities_5,
                       self.raw_db_7, repo=self)
         diff.validate(to_validate)
+
+    def test(self, to_test=None):
+        if to_test is None:
+            to_test = [
+                getattr(getattr(self, x), "test_table")
+                for x in dir(self) if hasattr(getattr(self, x), "test_table")
+            ]
+        else:
+            if not hasattr(to_test, "test_table"):
+                _logger.warning(f"Missing test_table in {to_test}")
+                return
+            to_test = [to_test.test_table]
+        test = tester(self.raw_db_dspace_5, self.raw_db_utilities_5,
+                      self.raw_db_7, repo=self)
+        test.run_tests(to_test)
 
     # =====
     def uuid(self, res_type_id: int, res_id: int):

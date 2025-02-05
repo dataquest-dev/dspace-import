@@ -153,6 +153,132 @@ class db:
         _logger.info(40 * "=")
 
 
+class tester:
+    """
+        A class for running tests by comparing two parts, processing them based on their type.
+
+        Test example:
+            {
+                "name": [TEST NAME],
+                "left": [LEFT PART OF TEST],
+                "right": [RIGHT PART OF TEST],
+                "compare": [TYPE OF COMPARING -> =, <, >, default is = ]
+            }
+
+        Part structure example:
+            TYPES -> sql, val
+            For "sql":
+                ["sql", [DATABASE -> dspace5, utilities5, db7], [FETCH -> one, all], [SELECT QUERY]]
+            For "val":
+                ["val", [VALUE]]
+    """
+
+    def __init__(self, raw_db_dspace_5, raw_db_utilities_5, raw_db_7, repo=None):
+        """
+            Repo object might be needed by `"process":` to be able to compare values.
+        """
+        self.raw_db_dspace_5 = raw_db_dspace_5
+        self.raw_db_utilities_5 = raw_db_utilities_5
+        self.raw_db_7 = raw_db_7
+        self._repo = repo
+
+    @staticmethod
+    def get_list_val(part: list, pos: int):
+        return part[pos] if len(part) > pos else None
+
+    @staticmethod
+    def log_error(msg: str, test_n: str, part_type: str = None) -> list:
+        _logger.error(f"Test [{test_n}] [{part_type}]: {msg}")
+        return []
+
+    def process(self, test_n: str, part: list, part_type: str) -> list:
+        """
+            Processes a test part based on its type.
+        """
+
+        # Determine the type and fetch values accordingly
+        part_val = self.get_list_val(part, 0)
+
+        if part_val == "sql":
+            db_type = self.get_list_val(part, 1)
+            db = {
+                "dspace5": self.raw_db_dspace_5,
+                "utilities5": self.raw_db_utilities_5,
+                "db7": self.raw_db_7
+            }.get(db_type)
+
+            if not db:
+                return self.log_error("Invalid db!", test_n, part_type)
+
+            sql = self.get_list_val(part, 3)
+            if sql:
+                fetch_type = self.get_list_val(part, 2)
+                if fetch_type == "one":
+                    return db.fetch_one(sql)
+                elif fetch_type == "all":
+                    return db.fetch_all(sql, self.get_list_val(part, 4))
+                else:
+                    return self.log_error("Invalid fetch option!", test_n, part_type)
+            else:
+                return self.log_error("Invalid sql!", test_n, part_type)
+
+        elif part_val == "val":
+            return self.get_list_val(part, 1)
+
+        return self.log_error("Invalid type!", test_n, part_type)
+
+    def run_tests(self, tests: list):
+        """
+        Iterates over a list of test groups and runs each test.
+        """
+        for test_group in tests:
+            for test in test_group:
+                self.run_test(test)
+
+    def run_test(self, test: dict):
+        """
+            Executes a test by comparing its two parts.
+            If the comparison is valid, it logs the result as "OK", otherwise "FAILED."
+        """
+        test_n = test.get("name", "Test")
+        part_l = test.get("left")
+        part_r = test.get("right")
+
+        msg = "Incorrect executed part!"
+        if not part_l:
+            self.log_error(msg, test_n, "left")
+            return
+        elif not part_r:
+            self.log_error(msg, test_n, "right")
+            return
+
+        vals_l = self.process(test_n, part_l, "left")
+        vals_r = self.process(test_n, part_r, "right")
+
+        # Error msg is already logged
+        if not vals_l and not vals_r:
+            _logger.error(f"Test [{test_n}]: FAILED")
+            return
+
+        compare = test.get("compare", "=")
+        ok = False
+        comparison_operations = {
+            "=": vals_l == vals_r,
+            ">": vals_l > vals_r,
+            "<": vals_l < vals_r,
+        }
+
+        if compare in comparison_operations:
+            ok = comparison_operations[compare]
+        else:
+            _logger.error(f"Test [{test_n}]: Invalid comparison operator!")
+
+        if ok:
+            _logger.info(f"Test [{test_n}]: OK")
+        else:
+            _logger.error(f"Test [{test_n}]: FAILED")
+
+
 class differ:
 
     def __init__(self, raw_db_dspace_5, raw_db_utilities_5, raw_db_7, repo=None):
