@@ -147,6 +147,21 @@ class metadatas:
         }],
     ]
 
+    test_table = [
+        {
+            "name": "ignored_redirectToURL",
+            "left": ["sql", "db7", "one", "select count(*) from metadatafieldregistry "
+                                          "where qualifier = 'redirectToURL'"],
+            "right": ["val", 0]
+        },
+        {
+            "name": "ignored_hasMetadata",
+            "left": ["sql", "db7", "one", "select count(*) from metadatafieldregistry "
+                                          "where element = 'hasMetadata'"],
+            "right": ["val", 0]
+        }
+    ]
+
     def __init__(self, env, dspace, value_file_str: str, field_file_str: str, schema_file_str: str):
         self._dspace = dspace
         self._values = {}
