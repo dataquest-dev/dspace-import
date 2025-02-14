@@ -22,11 +22,11 @@ init_logging(_logger, env["log_file"])
 
 
 class checker:
-    def __init__(self, dsapce_be, data_path: str, new_key: str, cur_key: str):
+    def __init__(self, dspace_be, data_path: str, new_key: str, cur_key: str):
         """
         Initialize the checker class with DSpace backend, data path, and URL keys.
         """
-        self._dspace_be = dsapce_be
+        self._dspace_be = dspace_be
         self._data = read_json(data_path)
         self._new_key = new_key
         self._cur_key = cur_key
@@ -45,6 +45,7 @@ class checker:
         pattern = r'bitstreams/([a-f0-9\-]+)'
         match = re.search(pattern, url)
         if match:
+            # refers to the first capturing group from the regex pattern
             return match.group(1)
         logging.error(f"Url {url} doesn't contains pattern {pattern}!")
         return None
@@ -75,7 +76,7 @@ class checker:
             return None
         return resp[key]
 
-    def compare_str(self, name_exp: str, name_got: str) -> bool:
+    def compare_name(self, name_exp: str, name_got: str) -> bool:
         """
         Compare the expected file name with the actual one.
         """
@@ -86,7 +87,7 @@ class checker:
                 f'Expected name {name_exp} is not match with got name {name_got}!')
             return False
 
-    def check_json(self):
+    def validate_urls(self):
         """
         Check URLs in the JSON data, compare names and log results.
         """
@@ -101,7 +102,7 @@ class checker:
                 # Extract the current file name from the URL
                 name = check.extract_name(item[self._cur_key])
                 # Compare the extracted names
-                if not check.compare_str(name, new_name):
+                if not check.compare_name(name, new_name):
                     logging.error(f"{prace_id}: incorrect!")
                     self._info["invalid"].append(prace_id)
                 else:
@@ -136,4 +137,4 @@ if __name__ == '__main__':
     dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
     check = checker(dspace_be, os.path.join(
         args.input_dir, args.JSON_name), args.new_key, args.curr_key)
-    check.check_json()
+    check.validate_urls()
