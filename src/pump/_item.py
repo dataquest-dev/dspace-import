@@ -33,6 +33,22 @@ class items:
 
     replaced_fields = {'local.hasMetadata': 'local.hasCMDI'}
 
+    test_table = [
+        {
+            "name": "item_hasMetadata_to_hasCMDI",
+            "left": ["sql", "db7", "one", "SELECT count(*) FROM metadatavalue where metadata_field_id in "
+                                          "(select metadata_field_id from metadatafieldregistry where element = 'hasCMDI')"],
+            "right": ["sql", "dspace5", "one", "SELECT count(*) FROM metadatavalue where metadata_field_id in "
+                                               "(select metadata_field_id from metadatafieldregistry where element = 'hasMetadata')"]
+        },
+        {
+            "name": "item_hasMetadata",
+            "left": ["sql", "db7", "one", "SELECT count(*) FROM metadatavalue where metadata_field_id in "
+                                          "(select metadata_field_id from metadatafieldregistry where element = 'hasMetadata')"],
+            "right": ["val", 0]
+        }
+    ]
+
     def __init__(self,
                  item_file_str: str,
                  ws_file_str: str,
