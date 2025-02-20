@@ -10,6 +10,31 @@ class resourcepolicies:
             delete from resourcepolicy ;
     """
 
+    test_table = [
+        {
+            "name": "res_policy_bitstream_embargo",
+            "left": ["sql", "db7", "one", "select count(*) from resourcepolicy "
+                                          "where action_id = 0 and epersongroup_id in "
+                                          "(select uuid from epersongroup where name = 'Anonymous') "
+                                          "and start_date is not null and resource_type_id = 0"],
+            "right": ["sql", "dspace5", "one", "select count(*) from resourcepolicy where action_id = 0 and "
+                                               "epersongroup_id in (select resource_id from metadatavalue where "
+                                               "text_value = 'Anonymous' and resource_type_id = 6) "
+                                               "and start_date is not null and resource_type_id = 0"]
+        },
+        {
+            "name": "res_policy_item_embargo",
+            "left": ["sql", "db7", "one", "select count(*) from resourcepolicy "
+                                          "where action_id = 0 and epersongroup_id in "
+                                          "(select uuid from epersongroup where name = 'Anonymous') "
+                                          "and start_date is not null and resource_type_id = 2"],
+            "right": ["sql", "dspace5", "one", "select count(*) from resourcepolicy where action_id = 0 and "
+                                               "epersongroup_id in (select resource_id from metadatavalue where "
+                                               "text_value = 'Anonymous' and resource_type_id = 6) "
+                                               "and start_date is not null and resource_type_id = 2"]
+        }
+    ]
+
     def __init__(self, resourcepolicy_file_str: str):
         self._respol = read_json(resourcepolicy_file_str)
         if len(self._respol) == 0:
