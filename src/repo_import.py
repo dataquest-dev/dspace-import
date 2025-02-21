@@ -48,7 +48,7 @@ if __name__ == "__main__":
         description='Import data from previous version to current DSpace')
     parser.add_argument('--resume',
                         help='Resume by loading values into dictionary',
-                        required=False, action="store_true", default=True)
+                        required=False, type=bool, default=True)
     parser.add_argument('--config',
                         help='Update configs',
                         required=False, type=str, action='append')
