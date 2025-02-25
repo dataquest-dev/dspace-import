@@ -457,19 +457,18 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 item_id = i_handle_d['item_id']
                 # Get the uuid of the item using the item_id
                 item_uuid = self.uuid(item_id)
-                # timestamp is required column in the database
-                timestamp = datetime.datetime.now()
-
-                db7.exe_sql(
-                    f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, version_summary, versionhistory_id, eperson_id, item_id) VALUES ("
-                    f"{versionitem_new_id}, "
-                    f"{index}, "
-                    f"'{timestamp}', "
-                    f"'', "
-                    f"{versionhistory_new_id}, "
-                    f"'{admin_uuid}', "
-                    f"'{item_uuid}');"
-                )
+                # Get the date issued of the version - use it instead of `timestamp` value
+                # `metadata_schema_id = 1` is `dc`
+                version_date_issued = db7.fetch_one("SELECT text_value from metadatavalue " +
+                                                    f"where dspace_object_id = '{item_uuid}' " +
+                                                    f"and metadata_field_id in " +
+                                                        "(select metadata_field_id from metadatafieldregistry " +
+                                                        "where metadata_schema_id = 1 and element = 'date' " +
+                                                        "and qualifier = 'issued');")
+                db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
+                            f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
+                            f"({versionitem_new_id}, {index}, TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD'), "
+                            f"'', {versionhistory_new_id}, '{admin_uuid}', '{item_uuid}');")
                 # Update sequence
                 db7.exe_sql(f"SELECT setval('versionitem_seq', {versionitem_new_id})")
                 versionitem_new_id += 1
