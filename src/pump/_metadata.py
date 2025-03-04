@@ -122,7 +122,7 @@ class metadatas:
             delete from metadatavalue ; delete from metadatafieldregistry ; delete from metadataschemaregistry ;
     """
 
-    # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=98 ;
+    # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=176 ;
     #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                176 |                  3 |  bitstream  |     file      | Files inside a bitstream if an archive
