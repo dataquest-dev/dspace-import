@@ -122,18 +122,15 @@ class metadatas:
             delete from metadatavalue ; delete from metadatafieldregistry ; delete from metadataschemaregistry ;
     """
 
-    # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=98 ;
-    #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
-    # -------------------+--------------------+-------------+---------------+----------------------------------------
-    #                 98 |                  3 | hasMetadata |     null      |      Indicates uploaded cmdi file
     # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=176 ;
+    #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                176 |                  3 |  bitstream  |     file      | Files inside a bitstream if an archive
     # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=178 ;
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                178 |                  3 |  bitstream  | redirectToURL |    Get the bitstream from this URL.
     IGNORE_FIELDS = [
-        98, 176, 178
+        176, 178
     ]
 
     validate_table = [
