@@ -191,7 +191,7 @@ class tester:
         _logger.error(f"Test [{test_n}] [{part_type}]: {msg}")
         return []
 
-    def process(self, test_n: str, part: list, part_type: str) -> list:
+    def process(self, test_n: str, part: list, part_type: str):
         """
             Processes a test part based on its type.
         """
@@ -208,7 +208,8 @@ class tester:
             }.get(db_type)
 
             if not db:
-                return self.log_error("Invalid db!", test_n, part_type)
+                self.log_error("Invalid db!", test_n, part_type)
+                return
 
             sql = self.get_list_val(part, 3)
             if sql:
@@ -218,14 +219,17 @@ class tester:
                 elif fetch_type == "all":
                     return db.fetch_all(sql, self.get_list_val(part, 4))
                 else:
-                    return self.log_error("Invalid fetch option!", test_n, part_type)
+                    self.log_error("Invalid fetch option!", test_n, part_type)
+                    return
             else:
-                return self.log_error("Invalid sql!", test_n, part_type)
+                self.log_error("Invalid sql!", test_n, part_type)
+                return
 
         elif part_val == "val":
             return self.get_list_val(part, 1)
 
-        return self.log_error("Invalid type!", test_n, part_type)
+        self.log_error("Invalid type!", test_n, part_type)
+        return
 
     def run_tests(self, tests: list):
         """
@@ -256,7 +260,7 @@ class tester:
         vals_r = self.process(test_n, part_r, "right")
 
         # Error msg is already logged
-        if not vals_l and not vals_r:
+        if vals_l is None or vals_r is None:
             _logger.error(f"Test [{test_n}]: FAILED")
             return
 
