@@ -1,4 +1,5 @@
 import argparse
+import difflib
 import logging
 import os
 import sys
@@ -42,12 +43,12 @@ class checker:
         """
         Extract UUID from the URL using a regex pattern.
         """
-        pattern = r'bitstreams/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$'
+        pattern = r'bitstreams/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(/download)?$'
         match = re.search(pattern, url)
         if match:
             # refers to the first capturing group from the regex pattern
             return match.group(1)
-        logging.error(f"Url {url} doesn't contains pattern {pattern}!")
+        logging.error(f"URL {url} doesn't contain the pattern {pattern}!")
         return None
 
     def extract_name(self, url: str) -> str:
@@ -58,7 +59,7 @@ class checker:
         match = re.search(pattern, url)
         if match:
             return match.group(1)
-        logging.error(f"Url {url} doesn't contains pattern {pattern}!")
+        logging.error(f"URL {url} doesn't contain the pattern {pattern}!")
         return None
 
     def get_bitstream_name(self, uuid: str) -> str:
@@ -66,7 +67,7 @@ class checker:
         Fetch the bitstream name from the DSpace backend using the UUID.
         """
         url = f'core/bitstreams/{uuid}'
-        resp = dspace_be._fetch(url, dspace_be.get, None)
+        resp = self._dspace_be._fetch(url, self._dspace_be.get, None)
         if not resp:
             logging.error("None response!")
             return None
@@ -83,8 +84,11 @@ class checker:
         if name_exp == name_got:
             return True
         else:
+            # Show the difference to help debug issues with special characters
+            diff = difflib.ndiff(name_exp, name_got)
+            differences = ''.join(diff)
             logging.error(
-                f'Expected name {name_exp} is not match with got name {name_got}!')
+                f'Names do not match:\nExpected: {name_exp}\nActual: {name_got}\nDifference: {differences}')
             return False
 
     def validate_urls(self):
@@ -94,15 +98,15 @@ class checker:
         for prace_id, items in self._data.items():
             for item in items:
                 # Extract bitstream UUID from new URL
-                uuid = check.extract_uuid(item[self._new_key])
+                uuid = self.extract_uuid(item[self._new_key])
                 if not uuid:
                     continue
                 # Get bitstream name from DSpace
-                new_name = check.get_bitstream_name(uuid)
+                new_name = self.get_bitstream_name(uuid)
                 # Extract the current file name from the URL
-                name = check.extract_name(item[self._cur_key])
+                name = self.extract_name(item[self._cur_key])
                 # Compare the extracted names
-                if not check.compare_name(name, new_name):
+                if not self.compare_name(name, new_name):
                     logging.error(f"{prace_id}: incorrect!")
                     self._info["invalid"].append(prace_id)
                 else:
@@ -131,10 +135,14 @@ if __name__ == '__main__':
                         default="cur_url",
                         help='Current data key')
     args = parser.parse_args()
-    _logger.info(f"Arguments: {args}")
+    # Log arguments except password
+    safe_args = vars(args).copy()
+    if 'password' in safe_args:
+        safe_args['password'] = '********'
+    _logger.info(f"Arguments: {safe_args}")
 
     # Initialize DSpace backend
     dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
-    check = checker(dspace_be, os.path.join(
+    url_checker = checker(dspace_be, os.path.join(
         args.input_dir, args.JSON_name), args.new_key, args.curr_key)
-    check.validate_urls()
+    url_checker.validate_urls()
