@@ -2,6 +2,7 @@ import argparse
 import logging
 import time
 import os
+import json
 import sys
 from datetime import datetime
 from collections import defaultdict
@@ -10,6 +11,12 @@ from collections import defaultdict
 _this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_this_dir, "../../src"))
 sys.path.insert(0, os.path.join(_this_dir, "../../src/pump"))
+
+import utils
+
+# load .env
+dotenv_file = os.path.join(_this_dir, '../../src/', os.environ.get("ENVFILE", ".env"))
+utils.load_env(dotenv_file)
 
 import dspace  # noqa
 import settings  # noqa
@@ -23,6 +30,18 @@ _logger = logging.getLogger()
 # env settings, update with project_settings
 env = update_settings(settings.env, project_settings.settings)
 init_logging(_logger, env["log_file"])
+
+
+def store_info(cache_file: str, d: dict):
+    new_d = {}
+    for k in d.keys():
+        if isinstance(d[k], set):
+            new_d[k] = list(d[k])
+        else:
+            new_d[k] = d[k]
+    with open(cache_file, "w") as fout:
+        json.dump(new_d, fout, indent=2, sort_keys=True)
+    _logger.info(f"Stored info to [{cache_file}]")
 
 
 class date:
@@ -49,7 +68,7 @@ class date:
         except ValueError as e:
             date.invalid[self._d] += 1
             if date.invalid[self._d] == 1:
-                _logger.warning(f"[{self._d}] is not valid date. Error: {e}")
+                _logger.debug(f"[{self._d}] is not valid date. Error: {e}")
             return False
 
     def parse(self) -> bool:
@@ -91,6 +110,13 @@ def update_item(item_d: dict):
 
 class updater:
 
+    ret_already_ok = 0
+    ret_failed = 1
+    ret_updated = 2
+    ret_created = 3
+    ret_invalid_meta = 4
+    ret_empty_meta = 4
+
     def __init__(self, dspace_be, from_mtd_fields: list, to_mtd_field: list, dry_run: bool = False):
         self._dspace_be = dspace_be
         self._from_mtd_fields = from_mtd_fields
@@ -116,7 +142,7 @@ class updater:
     def info(self):
         return self._info
 
-    def update_existing_metadata(self, item: dict, date_str: str):
+    def update_existing_metadata(self, item: dict, date_str: str) -> int:
         uuid = item['uuid']
         item_mtd = item["metadata"]
 
@@ -125,13 +151,13 @@ class updater:
         date_val = date(date_str)
         if date_val.is_valid():
             self._info["valid"].append((uuid, date_val.input))
-            return True
+            return updater.ret_already_ok
 
         parsed_ok = date_val.parse()
         if parsed_ok is False:
             _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date")
             self._info["invalid_date"].append((uuid, date_val.input))
-            return False
+            return updater.ret_invalid_meta
 
         # Convert date to correct format if necessary
         date.invalid_but_converted[date_val.input] += 1
@@ -147,12 +173,12 @@ class updater:
         if not updated_ok:
             _logger.error(f"{id_str}: error updating item")
             self._info["error_updating"].append((uuid, date_val.input))
-            return False
+            return updater.ret_failed
 
         self._info["updated"].append((uuid, date_val.input))
-        return True
+        return updater.updated
 
-    def add_new_metadata(self, item) -> bool:
+    def add_new_metadata(self, item) -> int:
         uuid = item['uuid']
         item_mtd = item["metadata"]
 
@@ -172,25 +198,24 @@ class updater:
                     self._info["invalid_date_all"].add(date_val.input)
                     continue
 
-            _logger.debug(f"{id_str}: created...")
+            _logger.info(f"{id_str}: created...")
 
             # Update the item in the database
-
             added = (self._dry_run or
                      self._dspace_be.client.add_metadata(Item(item), self._to_mtd_field, date_val.value))
 
             if not added:
-                _logger.warning(f"{id_str}: Error creating metadata")
+                _logger.critical(f"{id_str}: Error creating metadata")
                 self._info["error_creating"].append((uuid, date_val.input))
-                return False
+                return updater.ret_failed
 
             self._info["created"].append((uuid, date_val.input))
-            return True
+            return updater.ret_created
 
         self._info["not_created"].append((uuid, None))
-        return False
+        return updater.ret_empty_meta
 
-    def update(self, item: dict) -> bool:
+    def update(self, item: dict) -> int:
         """Create missing metadata for items based on provided fields."""
         item_mtd = item["metadata"]
         uuid = item['uuid']
@@ -265,25 +290,78 @@ if __name__ == '__main__':
     args = parser.parse_args()
     _logger.info(f"Arguments: {args}")
 
+    output_info = os.path.join(_this_dir, "__results.json")
+    _logger.info(f"Output info file: {output_info}")
+
     start = time.time()
+    user = os.environ.get("DSPACE_USER", args.user)
+    password = os.environ.get("DSPACE_PASSWORD", args.password)
+    endpoint = args.endpoint.rstrip("/")
+    if "DSPACE_USER" in os.environ or "DSPACE_PASSWORD" in os.environ:
+        _logger.info(f"Used environment variables: {user}")
 
     # Initialize DSpace backend
-    dspace_be = dspace.rest(args.endpoint, args.user, args.password, True)
+    dspace_be = dspace.rest(endpoint, user, password, True)
 
     upd = updater(dspace_be, args.from_mtd_field, args.to_mtd_field, dry_run=args.dry_run)
 
     stats = additional_stats()
 
+    fe_url = endpoint.split("/server")[0]
+
+    every_N = 1000
+    cur_i = 0
+
     # Process items
     len_all_items = 0
     len_used_items = 0
+    verify_failed = []
     for items in dspace_be.iter_items():
+        cur_i += len(items)
         len_all_items += len(items)
         items = [item for item in items if not item['withdrawn'] and item['inArchive']]
         len_used_items += len(items)
         for item in items:
+            uuid = item['uuid']
+            item_url = f"{fe_url}/items/{uuid}"
+            orig_values = [x['value']
+                           for x in item.get("metadata", {}).get(args.to_mtd_field, [])]
             stats.update(item)
-            upd.update(item)
+            ret_updated = upd.update(item)
+
+            if ret_updated == updater.ret_already_ok:
+                continue
+
+            if ret_updated == updater.ret_invalid_meta:
+                _logger.warning(
+                    f"Item [ {item_url} ] does not have correct metadata [{orig_values}]")
+            elif ret_updated == updater.ret_failed:
+                _logger.critical(f"Item [ {item_url} ] failed to update metadata")
+            elif ret_updated == updater.ret_empty_meta:
+                _logger.warning(
+                    f"Item [ {item_url} ] does not have specified metadata [{args.from_mtd_field}]")
+            elif ret_updated in (updater.ret_created, updater.ret_updated):
+                # double verify
+                new_item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
+                new_values = [x['value'] for x in new_item.get(
+                    "metadata", {}).get(args.to_mtd_field, [])]
+                if len(new_values) == 0 or orig_values == new_values:
+                    _logger.error(
+                        f"Item [ {item_url} ] does not have correct metadata [{orig_values}]->[{new_values}] after create/update")
+                    verify_failed.append((uuid, item_url, orig_values))
+                else:
+                    _logger.info(
+                        f"Item [ {item_url} ] updated - {orig_values} -> {new_values}")
+            else:
+                _logger.error(
+                    f"Item [ {item_url} ] returned unexpected value [{ret_updated}]")
+
+        # store intermediate outputs
+        if cur_i > every_N:
+            store_info(output_info, upd.info)
+            cur_i = 0
+
+    store_info(output_info, upd.info)
 
     _logger.info(40 * "=")
     _logger.info("Item info:")

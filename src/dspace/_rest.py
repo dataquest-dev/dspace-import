@@ -374,7 +374,7 @@ class rest:
                 return items[:limit]
         return items
 
-    def iter_items(self, page_size: int = 100, limit: int = -1, uuid: str = None):
+    def iter_items(self, page_size: int = 100, limit: int = -1, uuid: str = None, reauth: int = 0):
         from tqdm import tqdm
 
         url = 'core/items'
@@ -407,6 +407,10 @@ class rest:
                     _logger.warning(f"Key [{item_key}] does not exist in response: {r}")
                 page += 1
                 pbar.update(len(items_data))
+
+                # make sure we have fresh token
+                if reauth > 0 and page % reauth == 0:
+                    self.client.authenticate()
 
                 if len_items >= limit > 0:
                     return

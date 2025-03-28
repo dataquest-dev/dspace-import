@@ -259,7 +259,8 @@ class iterator:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Add metadata for DSpace items")
+    parser = argparse.ArgumentParser(
+        description="Report metadata information of DSpace items")
     parser.add_argument("--endpoint", type=str, default=env["backend"]["endpoint"])
     parser.add_argument("--user", type=str, default=env["backend"]["user"])
     parser.add_argument("--password", type=str, default=env["backend"]["password"])

@@ -1,5 +1,17 @@
 import os
 import logging
+_logger = logging.getLogger(__name__)
+
+
+def load_env(file_str: str):
+    if not os.path.exists(file_str):
+        _logger.debug(f"File [{file_str}] not found.")
+        return False
+    with open(file_str, "r", encoding="utf-8") as fin:
+        for k, v in [x.strip().split("=") for x in fin.readlines() if len(x.strip()) > 0]:
+            # win would use uppercase anyway
+            os.environ[k.upper()] = v
+    return True
 
 
 def init_logging(

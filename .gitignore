@@ -143,3 +143,4 @@ temp-files/
 __logs
 input
 *.bak
+.env*
