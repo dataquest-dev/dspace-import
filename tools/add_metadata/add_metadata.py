@@ -287,6 +287,7 @@ if __name__ == '__main__':
     parser.add_argument("--user", type=str, default=env["backend"]["user"])
     parser.add_argument("--password", type=str, default=env["backend"]["password"])
     parser.add_argument("--dry-run", action='store_true', default=False)
+    parser.add_argument("--result-every-N", type=int, default=10000)
     args = parser.parse_args()
     _logger.info(f"Arguments: {args}")
 
@@ -309,7 +310,6 @@ if __name__ == '__main__':
 
     fe_url = endpoint.split("/server")[0]
 
-    every_N = 1000
     cur_i = 0
 
     # Process items
@@ -332,32 +332,35 @@ if __name__ == '__main__':
             if ret_updated == updater.ret_already_ok:
                 continue
 
+            # serious
+            if ret_updated == updater.ret_failed:
+                _logger.critical(f"Item [ {item_url} ] failed to update metadata")
+                continue
+
             if ret_updated == updater.ret_invalid_meta:
                 _logger.warning(
                     f"Item [ {item_url} ] does not have correct metadata [{orig_values}]")
-            elif ret_updated == updater.ret_failed:
-                _logger.critical(f"Item [ {item_url} ] failed to update metadata")
-            elif ret_updated == updater.ret_empty_meta:
+                continue
+            if ret_updated == updater.ret_empty_meta:
                 _logger.warning(
                     f"Item [ {item_url} ] does not have specified metadata [{args.from_mtd_field}]")
-            elif ret_updated in (updater.ret_created, updater.ret_updated):
-                # double verify
+                continue
+
+            # something changed, double verify
+            if ret_updated in (updater.ret_created, updater.ret_updated):
                 new_item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
-                new_values = [x['value'] for x in new_item.get(
-                    "metadata", {}).get(args.to_mtd_field, [])]
+                new_values = [x['value'] for x in new_item.get("metadata", {}).get(args.to_mtd_field, [])]  # noqa
                 if len(new_values) == 0 or orig_values == new_values:
-                    _logger.error(
-                        f"Item [ {item_url} ] does not have correct metadata [{orig_values}]->[{new_values}] after create/update")
+                    _logger.error(f"Item [ {item_url} ] does not have correct metadata [{orig_values}]->[{new_values}] after create/update")  # noqa
                     verify_failed.append((uuid, item_url, orig_values))
                 else:
-                    _logger.info(
-                        f"Item [ {item_url} ] updated - {orig_values} -> {new_values}")
+                    _logger.info(f"Item [ {item_url} ] updated - {orig_values} -> {new_values}")  # noqa
             else:
                 _logger.error(
                     f"Item [ {item_url} ] returned unexpected value [{ret_updated}]")
 
         # store intermediate outputs
-        if cur_i > every_N:
+        if cur_i > args.result_every_N:
             store_info(output_info, upd.info)
             cur_i = 0
 
