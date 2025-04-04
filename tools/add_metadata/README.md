@@ -15,3 +15,9 @@ python add_metadata.py --dry-run --endpoint="http://dev-5.pc:86/server/api/" --t
 set ENVFILE=.env-tul
 python add_metadata.py --endpoint="https://dspace.tul.cz/server/api/" --to_mtd_field dc.date.issued --from_mtd_field dc.date.submitted dc.date.committed dc.date.defense dc.date --dry-run
 ```
+
+## TUL update dc.date.issued second time
+```
+set ENVFILE=.env-tul
+python add_metadata.py --endpoint="https://dspace.tul.cz/server/api" --to_mtd_field dc.date.issued --from_mtd_field dc.date.defense dc.date.submitted dc.date.committed dc.date --only=./update.issued.date.json
+```

@@ -396,7 +396,7 @@ class rest:
                     break
                 # only one
                 if uuid is not None:
-                    yield [r]
+                    yield r
                     return
 
                 items_data = r.get(item_key, [])

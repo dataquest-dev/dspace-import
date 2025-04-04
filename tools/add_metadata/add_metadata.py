@@ -32,15 +32,27 @@ env = update_settings(settings.env, project_settings.settings)
 init_logging(_logger, env["log_file"])
 
 
-def store_info(cache_file: str, d: dict):
-    new_d = {}
-    for k in d.keys():
-        if isinstance(d[k], set):
-            new_d[k] = list(d[k])
-        else:
-            new_d[k] = d[k]
+class iter_items_specific:
+    def __init__(self, items, dspace_be):
+        self.items = items
+        self.dspace_be = dspace_be
+
+    def __call__(self):
+        for item_arr in self.items:
+            uuid = item_arr[0]
+            item_gen = self.dspace_be.iter_items(uuid=uuid)
+            item_list = list(item_gen)
+            yield item_list
+
+
+def store_info(cache_file: str, d: dict, details: dict):
+    new_d = {k: list(v) if isinstance(v, set) else v for k, v in d.items()}
+    data = {
+        "data": new_d,
+        "details": details,
+    }
     with open(cache_file, "w") as fout:
-        json.dump(new_d, fout, indent=2, sort_keys=True)
+        json.dump(data, fout, indent=2, sort_keys=True)
     _logger.info(f"Stored info to [{cache_file}]")
 
 
@@ -142,22 +154,46 @@ class updater:
     def info(self):
         return self._info
 
-    def update_existing_metadata(self, item: dict, date_str: str) -> int:
+    def find_correct_metadata(self, item: dict):
+        uuid = item['uuid']
+        item_mtd = item["metadata"]
+
+        for from_mtd in self._from_mtd_fields:
+            meta_key = item_mtd.get(from_mtd, None)
+            if meta_key is None:
+                continue
+            id_str = f"Item [{uuid}]: [{from_mtd}]"
+            if len(meta_key) != 1:
+                _logger.warning(f"{id_str}: more than one value {meta_key}")
+
+            # If there is more than one value, get only the first one
+            meta_val = date(meta_key[0]["value"])
+            # Convert date if necessary
+            if not meta_val.is_valid():
+                if not meta_val.parse():
+                    self._info["invalid_date_all"].add(meta_val.input)
+                    continue
+            return meta_val, id_str
+
+        return None, None
+
+    def update_existing_metadata(self, item: dict, date_str: str, force: bool = False) -> int:
         uuid = item['uuid']
         item_mtd = item["metadata"]
 
         id_str = f"Item [{uuid}]: [{self._to_mtd_field}]"
         # If there is more than one value, get only the first one
         date_val = date(date_str)
-        if date_val.is_valid():
-            self._info["valid"].append((uuid, date_val.input))
-            return updater.ret_already_ok
+        if not force:
+            if date_val.is_valid():
+                self._info["valid"].append((uuid, date_val.input))
+                return updater.ret_already_ok
 
-        parsed_ok = date_val.parse()
-        if parsed_ok is False:
-            _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date")
-            self._info["invalid_date"].append((uuid, date_val.input))
-            return updater.ret_invalid_meta
+            parsed_ok = date_val.parse()
+            if parsed_ok is False:
+                _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date")
+                self._info["invalid_date"].append((uuid, date_val.input))
+                return updater.ret_invalid_meta
 
         # Convert date to correct format if necessary
         date.invalid_but_converted[date_val.input] += 1
@@ -176,46 +212,28 @@ class updater:
             return updater.ret_failed
 
         self._info["updated"].append((uuid, date_val.input))
-        return updater.updated
+        return updater.ret_updated
 
     def add_new_metadata(self, item) -> int:
         uuid = item['uuid']
-        item_mtd = item["metadata"]
 
-        for from_mtd in self._from_mtd_fields:
-            date_meta = item_mtd.get(from_mtd, None)
-            if date_meta is None:
-                continue
-            id_str = f"Item [{uuid}]: [{from_mtd}]"
-            if len(date_meta) != 1:
-                _logger.warning(f"{id_str}: more than one value {date_meta}")
-
-            # If there is more than one value, get only the first one
-            date_val = date(date_meta[0]["value"])
-            # Convert date if necessary
-            if not date_val.is_valid():
-                if not date_val.parse():
-                    self._info["invalid_date_all"].add(date_val.input)
-                    continue
-
+        meta_val, id_str = self.find_correct_metadata(item)
+        if meta_val is not None:
             _logger.info(f"{id_str}: created...")
-
-            # Update the item in the database
             added = (self._dry_run or
-                     self._dspace_be.client.add_metadata(Item(item), self._to_mtd_field, date_val.value))
-
+                     self._dspace_be.client.add_metadata(Item(item), self._to_mtd_field, meta_val.value))
             if not added:
                 _logger.critical(f"{id_str}: Error creating metadata")
-                self._info["error_creating"].append((uuid, date_val.input))
+                self._info["error_creating"].append((uuid, meta_val.input))
                 return updater.ret_failed
 
-            self._info["created"].append((uuid, date_val.input))
+            self._info["created"].append((uuid, meta_val.input))
             return updater.ret_created
 
         self._info["not_created"].append((uuid, None))
         return updater.ret_empty_meta
 
-    def update(self, item: dict) -> int:
+    def update(self, item: dict, force: bool = False) -> int:
         """Create missing metadata for items based on provided fields."""
         item_mtd = item["metadata"]
         uuid = item['uuid']
@@ -242,7 +260,23 @@ class updater:
                             Item(item), self._to_mtd_field, i)
                     # Reload item and metadata
                     item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
-            return self.update_existing_metadata(item, val)
+
+            # force change of metadata
+            if force:
+                meta_val, id_str = self.find_correct_metadata(item)
+                if meta_val is not None:
+                    if meta_val.value == val:
+                        _logger.info(f"{id_str}: already correct")
+                        return updater.ret_already_ok
+                    _logger.info(
+                        f"{uuid}: forced change of metadata: {val} -> {meta_val.value}")
+                    val = meta_val.value
+                else:
+                    _logger.info(
+                        f"Forced metadata change but no value found for [{uuid}]")
+                    return updater.ret_empty_meta
+
+            return self.update_existing_metadata(item, val, force=force)
         else:
             return self.add_new_metadata(item)
 
@@ -288,8 +322,12 @@ if __name__ == '__main__':
     parser.add_argument("--password", type=str, default=env["backend"]["password"])
     parser.add_argument("--dry-run", action='store_true', default=False)
     parser.add_argument("--result-every-N", type=int, default=10000)
+    parser.add_argument("--only", type=str, default=None)
     args = parser.parse_args()
-    _logger.info(f"Arguments: {args}")
+    # output args from parse_args but without passwords
+    args_dict = vars(args).copy()
+    args_dict.pop("password", None)
+    _logger.info(f"Arguments: {args_dict}")
 
     output_info = os.path.join(_this_dir, "__results.json")
     _logger.info(f"Output info file: {output_info}")
@@ -312,11 +350,24 @@ if __name__ == '__main__':
 
     cur_i = 0
 
+    force = False
+    if args.only is None:
+        iter_items = dspace_be.iter_items
+    else:
+        if not os.path.exists(args.only):
+            _logger.error(f"File [{args.only}] does not exist")
+            sys.exit(1)
+        with open(args.only, "r") as fin:
+            items = json.load(fin)
+        _logger.info(f"Loaded [{len(items)}] items from [{args.only}]")
+        iter_items = iter_items_specific(items, dspace_be)
+        force = True
+
     # Process items
     len_all_items = 0
     len_used_items = 0
     verify_failed = []
-    for items in dspace_be.iter_items():
+    for items in iter_items():
         cur_i += len(items)
         len_all_items += len(items)
         items = [item for item in items if not item['withdrawn'] and item['inArchive']]
@@ -327,7 +378,7 @@ if __name__ == '__main__':
             orig_values = [x['value']
                            for x in item.get("metadata", {}).get(args.to_mtd_field, [])]
             stats.update(item)
-            ret_updated = upd.update(item)
+            ret_updated = upd.update(item, force=force)
 
             if ret_updated == updater.ret_already_ok:
                 continue
@@ -361,10 +412,10 @@ if __name__ == '__main__':
 
         # store intermediate outputs
         if cur_i > args.result_every_N:
-            store_info(output_info, upd.info)
+            store_info(output_info, upd.info, {"args_dict": args_dict})
             cur_i = 0
 
-    store_info(output_info, upd.info)
+    store_info(output_info, upd.info, {"args_dict": args_dict})
 
     _logger.info(40 * "=")
     _logger.info("Item info:")
