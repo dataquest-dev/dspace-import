@@ -43,11 +43,11 @@ class checker:
         """
         Extract UUID from the URL using a regex pattern.
         """
-        pattern = r'bitstreams/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(/download)?$'
+        pattern = r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'
         match = re.search(pattern, url)
         if match:
             # refers to the first capturing group from the regex pattern
-            return match.group(1)
+            return match.group(0)
         logging.error(f"URL {url} doesn't contain the pattern {pattern}!")
         return None
 
