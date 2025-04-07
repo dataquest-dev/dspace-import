@@ -228,9 +228,9 @@ class bitstreams:
                 data['sizeBytes'] = 1748
                 data['checkSum'] = {
                     'checkSumAlgorithm': b['checksum_algorithm'],
-                    'value': '8a4605be74aa9ea9d79846c1fba20a33'
+                    'value': 'bb9bdc0b3349e4284e09149f943790b4'
                 }
-                params['internal_id'] = '77893754617268908529226218097860272513'
+                params['internal_id'] = '57024294293009067626820405177604023574'
 
             # if bitstream has bundle, set bundle_id from None to id
             if b_id in self._bs2bundle:
