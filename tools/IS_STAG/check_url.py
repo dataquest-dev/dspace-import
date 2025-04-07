@@ -108,6 +108,7 @@ class checker:
                 uuid = self.extract_uuid(item[self._new_key])
                 if not uuid:
                     self._info["invalid"].append(prace_id)
+                    continue
                 # Get bitstream name from DSpace
                 new_name = self.get_bitstream_name(uuid)
                 if not new_name:
