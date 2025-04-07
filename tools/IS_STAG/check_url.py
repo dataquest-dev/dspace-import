@@ -34,6 +34,10 @@ class checker:
         self._info = {
             "invalid": []
         }
+        # regex patterns
+        self._uuid_pattern = (
+            re.compile(r'bitstreams/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(/download)?$'))
+        self._name_pattern = re.compile(r'/([^/]+?)(?:\?.*)?$')
 
     @property
     def info(self):
@@ -43,23 +47,21 @@ class checker:
         """
         Extract UUID from the URL using a regex pattern.
         """
-        pattern = r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'
-        match = re.search(pattern, url)
+        match = self._uuid_pattern.search(url)
         if match:
             # refers to the first capturing group from the regex pattern
-            return match.group(0)
-        logging.error(f"URL {url} doesn't contain the pattern {pattern}!")
+            return match.group(1)
+        logging.error(f"Could not extract UUID from URL: {url}")
         return None
 
     def extract_name(self, url: str) -> str:
         """
         Extract the file name from the URL.
         """
-        pattern = r'([^/]+)$'
-        match = re.search(pattern, url)
+        match = self._name_pattern.search(url)
         if match:
             return match.group(1)
-        logging.error(f"URL {url} doesn't contain the pattern {pattern}!")
+        logging.error(f"Could not extract file name from URL: {url}")
         return None
 
     def get_bitstream_name(self, uuid: str) -> str:
@@ -77,7 +79,7 @@ class checker:
             return None
         return resp[key]
 
-    def compare_name(self, name_exp: str, name_got: str) -> bool:
+    def are_names_matching(self, name_exp: str, name_got: str) -> bool:
         """
         Compare the expected file name with the actual one.
         """
@@ -97,16 +99,27 @@ class checker:
         """
         for prace_id, items in self._data.items():
             for item in items:
+                # Check if required keys exist
+                if self._new_key not in item or self._cur_key not in item:
+                    logging.error(f"{prace_id}: Missing required keys in item.")
+                    self._info["invalid"].append(prace_id)
+                    continue
                 # Extract bitstream UUID from new URL
                 uuid = self.extract_uuid(item[self._new_key])
                 if not uuid:
-                    continue
+                    self._info["invalid"].append(prace_id)
                 # Get bitstream name from DSpace
                 new_name = self.get_bitstream_name(uuid)
+                if not new_name:
+                    self._info["invalid"].append(prace_id)
+                    continue
                 # Extract the current file name from the URL
                 name = self.extract_name(item[self._cur_key])
+                if not name:
+                    self._info["invalid"].append(prace_id)
+                    continue
                 # Compare the extracted names
-                if not self.compare_name(name, new_name):
+                if not self.are_names_matching(name, new_name):
                     logging.error(f"{prace_id}: incorrect!")
                     self._info["invalid"].append(prace_id)
                 else:
