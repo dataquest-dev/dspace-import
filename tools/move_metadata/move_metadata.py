@@ -49,6 +49,7 @@ def store_info(cache_file: str, d: dict, details: dict):
         "data": new_d,
         "details": details,
     }
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     with open(cache_file, "w", encoding="utf-8") as fout:
         json.dump(data, fout, indent=2, sort_keys=True)
     _logger.info(f"Stored info to [{cache_file}]")
@@ -157,10 +158,10 @@ def get_items_iterator(args, dspace_be):
     try:
         with open(args.only, "r") as fin:
             items = json.load(fin)
-    except:
+    except Exception:
         with open(args.only, "r", encoding="utf-8") as fin:
             items = [(x.strip(), None) for x in fin.read().splitlines()
-                     if len(x.strip()) > 0]
+                     if len(x.strip()) > 0 and not x.startswith("#")]
     _logger.info(f"Loaded [{len(items)}] items from [{args.only}]")
     return iter_items_specific(items, dspace_be), True
 
