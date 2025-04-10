@@ -266,7 +266,6 @@ class updater:
                 meta_val, id_str = self.find_correct_metadata(item)
                 if meta_val is not None:
                     if meta_val.value == val:
-                        _logger.info(f"{id_str}: already correct")
                         return updater.ret_already_ok
                     _logger.info(
                         f"{uuid}: forced change of metadata: {val} -> {meta_val.value}")
@@ -357,8 +356,13 @@ if __name__ == '__main__':
         if not os.path.exists(args.only):
             _logger.error(f"File [{args.only}] does not exist")
             sys.exit(1)
-        with open(args.only, "r") as fin:
-            items = json.load(fin)
+        try:
+            with open(args.only, "r") as fin:
+                items = json.load(fin)
+        except:
+            with open(args.only, "r", encoding="utf-8") as fin:
+                items = [(x.strip(), None) for x in fin.read().splitlines()
+                         if len(x.strip()) > 0]
         _logger.info(f"Loaded [{len(items)}] items from [{args.only}]")
         iter_items = iter_items_specific(items, dspace_be)
         force = True
@@ -367,48 +371,57 @@ if __name__ == '__main__':
     len_all_items = 0
     len_used_items = 0
     verify_failed = []
+    i = 0
+
     for items in iter_items():
         cur_i += len(items)
         len_all_items += len(items)
         items = [item for item in items if not item['withdrawn'] and item['inArchive']]
         len_used_items += len(items)
         for item in items:
+            i += 1
             uuid = item['uuid']
             item_url = f"{fe_url}/items/{uuid}"
+            msg_header = f"{i:5d}: Item [ {item_url} ]"
             orig_values = [x['value']
                            for x in item.get("metadata", {}).get(args.to_mtd_field, [])]
             stats.update(item)
             ret_updated = upd.update(item, force=force)
 
             if ret_updated == updater.ret_already_ok:
+                _logger.info(f"{msg_header}: already correct")
                 continue
 
             # serious
             if ret_updated == updater.ret_failed:
-                _logger.critical(f"Item [ {item_url} ] failed to update metadata")
+                _logger.critical(f"{msg_header} failed to update metadata")
                 continue
 
             if ret_updated == updater.ret_invalid_meta:
                 _logger.warning(
-                    f"Item [ {item_url} ] does not have correct metadata [{orig_values}]")
+                    f"{msg_header} does not have correct metadata [{orig_values}]")
                 continue
             if ret_updated == updater.ret_empty_meta:
                 _logger.warning(
-                    f"Item [ {item_url} ] does not have specified metadata [{args.from_mtd_field}]")
+                    f"{msg_header} does not have specified metadata [{args.from_mtd_field}]")
+                continue
+
+            if args.dry_run:
+                _logger.info(f"{msg_header} updated - {orig_values} -> DRY-RUN")  # noqa
                 continue
 
             # something changed, double verify
             if ret_updated in (updater.ret_created, updater.ret_updated):
-                new_item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, None)
+                new_item = dspace_be._fetch(f'core/items/{uuid}', dspace_be.get, key=None)
                 new_values = [x['value'] for x in new_item.get("metadata", {}).get(args.to_mtd_field, [])]  # noqa
                 if len(new_values) == 0 or orig_values == new_values:
-                    _logger.error(f"Item [ {item_url} ] does not have correct metadata [{orig_values}]->[{new_values}] after create/update")  # noqa
+                    _logger.error(f"{msg_header} does not have correct metadata [{orig_values}]->[{new_values}] after create/update")  # noqa
                     verify_failed.append((uuid, item_url, orig_values))
                 else:
-                    _logger.info(f"Item [ {item_url} ] updated - {orig_values} -> {new_values}")  # noqa
+                    _logger.info(f"{msg_header} updated - {orig_values} -> {new_values}")  # noqa
             else:
                 _logger.error(
-                    f"Item [ {item_url} ] returned unexpected value [{ret_updated}]")
+                    f"{msg_header} returned unexpected value [{ret_updated}]")
 
         # store intermediate outputs
         if cur_i > args.result_every_N:

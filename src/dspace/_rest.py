@@ -387,8 +387,11 @@ class rest:
         if uuid is not None:
             fetch_key = None
             url = f"{url}/{uuid}"
+            pbar = None
+        else:
+            pbar = tqdm(desc="Fetching items", unit=" items")
 
-        with tqdm(desc="Fetching items", unit=" items") as pbar:
+        try:
             while True:
                 r = self._fetch(url, self.get, fetch_key,
                                 params={"page": page, "size": page_size})
@@ -406,7 +409,8 @@ class rest:
                 else:
                     _logger.warning(f"Key [{item_key}] does not exist in response: {r}")
                 page += 1
-                pbar.update(len(items_data))
+                if pbar is not None:
+                    pbar.update(len(items_data))
 
                 # make sure we have fresh token
                 if reauth > 0 and page % reauth == 0:
@@ -414,6 +418,9 @@ class rest:
 
                 if len_items >= limit > 0:
                     return
+        finally:
+            if pbar is not None:
+                pbar.close()
 
     def put_ws_item(self, param: dict, data: dict):
         url = 'clarin/import/workspaceitem'
