@@ -87,13 +87,15 @@ class rest:
             Mapped table: handles
         """
         url = 'clarin/import/handle'
-        arr = [{'handle': h['handle'], 'resourceTypeID': h['resource_type_id']}
+        arr = [{'handle': h['handle'], 'resourceTypeID': h['resource_type_id'],
+                'dead': h['dead'], 'deadSince': h['dead_since']}
                for h in handle_arr]
         return self._put(url, arr)
 
     def put_handles(self, handle_arr: list):
         url = 'core/handles'
-        arr = [{'handle': h['handle'], 'url': h['url']} for h in handle_arr]
+        arr = [{'handle': h['handle'], 'url': h['url'], 'dead': h['dead'],
+                'deadSince': h['dead_since']} for h in handle_arr]
         return self._put(url, arr)
 
     # =======
