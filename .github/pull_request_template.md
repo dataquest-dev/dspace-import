@@ -1,4 +1,4 @@
-| Phases            | MP | MM  |  MB  | MR |   JM | Total  |
+| Phases            | MS | MM  |  MK  | JR |   JM | Total  |
 |-----------------|----:|----:|----:|-----:|-----:|-------:|
 | ETA                  |  0  |  0  |    0 |     0 |      0 |        0 |
 | Developing      |  0  |  0  |    0 |    0 |      0 |         0 |
