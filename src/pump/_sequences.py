@@ -39,7 +39,7 @@ class sequences:
                 continue
 
             # use cursor according to database to which sequence belongs
-            if dspace5_seq_db == "clarin-dspace":
+            if dspace5_seq_db == env["db_dspace_5"]["name"]:
                 db = db5_dspace
             else:
                 db = db5_utilities

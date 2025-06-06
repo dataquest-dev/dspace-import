@@ -120,6 +120,7 @@ class repo:
             _f("license_label"),
             _f("license_definition"),
             _f("license_label_extended_mapping"),
+            env.get("db_utilities_5", {}).get("name", "clarin-utilities")
         )
 
         self.items = items(
