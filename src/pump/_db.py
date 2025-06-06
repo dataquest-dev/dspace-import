@@ -408,7 +408,7 @@ class differ:
                 raw_db_name = getattr(
                     getattr(self.raw_db_dspace_5, "_conn", None),
                     "name",
-                    None
+                    "clarin-dspace"
                 )
                 db5_name = defin.get("db", raw_db_name)
                 db5 = self.raw_db_dspace_5 if db5_name == raw_db_name else self.raw_db_utilities_5
