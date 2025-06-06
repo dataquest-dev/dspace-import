@@ -7,37 +7,11 @@ _logger = logging.getLogger("pump.license")
 
 class licenses:
 
-    validate_table = [
-        ["license_definition", {
-            "compare": ["name", "confirmation", "required_info"],
-            "db": "clarin-utilities",
-        }],
-        ["license_label", {
-            "compare": ["label", "title"],
-            "db": "clarin-utilities",
-        }],
-        ["license_label", {
-            "compare": ["label", "title"],
-            "db": "clarin-utilities",
-        }],
-        ["license_label_extended_mapping", {
-            "nonnull": ["license_id"],
-            "db": "clarin-utilities",
-        }],
-        ["license_resource_user_allowance", {
-            "nonnull": ["mapping_id"],
-            "db": "clarin-utilities",
-        }],
-        ["license_resource_mapping", {
-            "nonnull": ["license_id"],
-            "db": "clarin-utilities",
-        }],
-    ]
-
     def __init__(self,
                  license_labels_file_str: str,
                  license_defs_file_str: str,
-                 license_map_file_str: str):
+                 license_map_file_str: str,
+                 db_name: str):
         self._labels = read_json(license_labels_file_str)
         self._licenses = read_json(license_defs_file_str)
         self._map = read_json(license_map_file_str)
@@ -56,6 +30,33 @@ class licenses:
             _logger.info(f"Empty input: [{license_map_file_str}].")
         if len(self._licenses) == 0:
             _logger.info(f"Empty input: [{license_defs_file_str}].")
+
+        self.validate_table = [
+            ["license_definition", {
+                "compare": ["name", "confirmation", "required_info"],
+                "db": db_name,
+            }],
+            ["license_label", {
+                "compare": ["label", "title"],
+                "db": db_name,
+            }],
+            ["license_label", {
+                "compare": ["label", "title"],
+                "db": db_name,
+            }],
+            ["license_label_extended_mapping", {
+                "nonnull": ["license_id"],
+                "db": db_name,
+            }],
+            ["license_resource_user_allowance", {
+                "nonnull": ["mapping_id"],
+                "db": db_name,
+            }],
+            ["license_resource_mapping", {
+                "nonnull": ["license_id"],
+                "db": db_name,
+            }],
+        ]
 
     def __len__(self):
         return len(self._labels)
