@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+from _utils import allowed_db
 _logger = logging.getLogger("pump.db")
 
 
@@ -405,13 +406,9 @@ class differ:
         for valid_defs in to_validate:
             for table_name, defin in valid_defs:
                 _logger.info("=" * 10 + f" Validating {table_name} " + "=" * 10)
-                raw_db_name = getattr(
-                    getattr(self.raw_db_dspace_5, "_conn", None),
-                    "name",
-                    "clarin-dspace"
-                )
-                db5_name = defin.get("db", raw_db_name)
-                db5 = self.raw_db_dspace_5 if db5_name == raw_db_name else self.raw_db_utilities_5
+
+                db5_name = defin.get("db", allowed_db.DSPACE)
+                db5 = self.raw_db_dspace_5 if db5_name == allowed_db.DSPACE else self.raw_db_utilities_5
 
                 cmp = defin.get("compare", None)
                 if cmp is not None:
