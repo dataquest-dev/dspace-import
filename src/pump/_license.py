@@ -1,7 +1,6 @@
 import os
 import logging
-from pump._utils import (read_json, time_method, serialize, deserialize, progress_bar, log_before_import,
-                         log_after_import, allowed_db)
+from pump._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.license")
 
@@ -11,27 +10,27 @@ class licenses:
     validate_table = [
         ["license_definition", {
             "compare": ["name", "confirmation", "required_info"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
         ["license_label", {
             "compare": ["label", "title"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
         ["license_label", {
             "compare": ["label", "title"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
         ["license_label_extended_mapping", {
             "nonnull": ["license_id"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
         ["license_resource_user_allowance", {
             "nonnull": ["mapping_id"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
         ["license_resource_mapping", {
             "nonnull": ["license_id"],
-            "db": allowed_db.DB_UTILITIES,
+            "db": "db_utilities_5",
         }],
     ]
 

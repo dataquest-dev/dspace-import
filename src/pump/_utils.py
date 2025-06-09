@@ -3,7 +3,6 @@ import os
 import logging
 from datetime import datetime, timezone
 from time import time as time_fnc
-from enum import Enum
 
 
 _logger = logging.getLogger("pump.utils")
@@ -130,8 +129,3 @@ def log_before_import(msg: str, expected: int):
 def log_after_import(msg: str, expected: int, imported: int):
     prefix = "OK " if expected == imported else "!!! WARN !!! "
     _logger.info(f"{prefix}Imported [{imported: >4d}] {msg}")
-
-
-class allowed_db(str, Enum):
-    UTILITIES = "db_utilities_5"
-    DSPACE = "db_dspace_5"
