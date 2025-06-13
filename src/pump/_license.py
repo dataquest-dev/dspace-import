@@ -10,27 +10,27 @@ class licenses:
     validate_table = [
         ["license_definition", {
             "compare": ["name", "confirmation", "required_info"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
         ["license_label", {
             "compare": ["label", "title"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
         ["license_label", {
             "compare": ["label", "title"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
         ["license_label_extended_mapping", {
             "nonnull": ["license_id"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
         ["license_resource_user_allowance", {
             "nonnull": ["mapping_id"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
         ["license_resource_mapping", {
             "nonnull": ["license_id"],
-            "db": "clarin-utilities",
+            "db": "db_utilities_5",
         }],
     ]
 

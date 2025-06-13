@@ -119,7 +119,7 @@ class repo:
         self.licenses = licenses(
             _f("license_label"),
             _f("license_definition"),
-            _f("license_label_extended_mapping"),
+            _f("license_label_extended_mapping")
         )
 
         self.items = items(

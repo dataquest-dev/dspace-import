@@ -405,8 +405,9 @@ class differ:
         for valid_defs in to_validate:
             for table_name, defin in valid_defs:
                 _logger.info("=" * 10 + f" Validating {table_name} " + "=" * 10)
-                db5_name = defin.get("db", "clarin-dspace")
-                db5 = self.raw_db_dspace_5 if db5_name == "clarin-dspace" else self.raw_db_utilities_5
+
+                db5_name = defin.get("db", "db_dspace_5")
+                db5 = self.raw_db_dspace_5 if db5_name == "db_dspace_5" else self.raw_db_utilities_5
 
                 cmp = defin.get("compare", None)
                 if cmp is not None:
