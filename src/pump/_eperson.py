@@ -97,13 +97,13 @@ class epersons:
                 continue
 
             data = {
-                'requireCertificate': e['require_certificate'],
-                'netid': e['netid'],
-                'canLogIn': e['can_log_in'],
-                'email': e['email'],
+                'requireCertificate': e.get('require_certificate'),
+                'netid': e.get('netid'),
+                'canLogIn': e.get('can_log_in'),
+                'email': e.get('email'),
                 'password': None,
-                'welcomeInfo': e['welcome_info'],
-                'canEditSubmissionMetadata': e['can_edit_submission_metadata']
+                'welcomeInfo': e.get('welcome_info'),
+                'canEditSubmissionMetadata': e.get('can_edit_submission_metadata')
             }
 
             e_meta = metadatas.value(epersons.TYPE, e_id)
