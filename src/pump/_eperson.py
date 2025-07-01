@@ -97,13 +97,11 @@ class epersons:
                 continue
 
             data = {
-                'selfRegistered': e['self_registered'],
                 'requireCertificate': e['require_certificate'],
                 'netid': e['netid'],
                 'canLogIn': e['can_log_in'],
-                'lastActive': e['last_active'],
                 'email': e['email'],
-                'password': e['password'],
+                'password': None,
                 'welcomeInfo': e['welcome_info'],
                 'canEditSubmissionMetadata': e['can_edit_submission_metadata']
             }
@@ -113,8 +111,11 @@ class epersons:
                 data['metadata'] = e_meta
 
             params = {
-                'selfRegistered': e['self_registered'],
-                'lastActive': e['last_active']
+                'selfRegistered': e.get('self_registered'),
+                'lastActive': e.get('last_active'),
+                'password': e.get('password'),
+                'salt': e.get('salt'),
+                'digestAlgorithm': e.get('digest_algorithm')
             }
             try:
                 resp = dspace.put_eperson(params, data)
