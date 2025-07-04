@@ -113,11 +113,12 @@ class licenses:
             except Exception as e:
                 _logger.error(f'put_license_label: [{l_id}] failed [{str(e)}]')
 
-        for m in self._map:
-            lic_id = m['license_id']
-            lab_id = m['label_id']
-            self._license2label.setdefault(str(lic_id), []).append(
-                self._created_labels[str(lab_id)])
+        if self._map:
+            for m in self._map:
+                lic_id = m['license_id']
+                lab_id = m['label_id']
+                self._license2label.setdefault(str(lic_id), []).append(
+                    self._created_labels[str(lab_id)])
 
         log_after_import(log_key, expected, self.imported_labels)
 
