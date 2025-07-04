@@ -37,11 +37,11 @@ class collections:
         self._groups_id2uuid = {}
         self._groups_uuid2type = {}
 
-        if len(self._col) == 0:
+        if not self._col:
             _logger.info(f"Empty input collections: [{col_file_str}].")
             return
 
-        if len(self._com2col) == 0:
+        if not self._com2col:
             _logger.info(f"Empty input community2collection: [{com2col_file_str}].")
             return
 
@@ -58,7 +58,7 @@ class collections:
             self._col2group[int(m.group(1))] = meta['resource_id']
 
     def __len__(self):
-        return len(self._col)
+        return len(self._col) if self._col is not None else 0
 
     def uuid(self, com_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

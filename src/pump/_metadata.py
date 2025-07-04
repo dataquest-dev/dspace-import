@@ -257,25 +257,25 @@ class metadatas:
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.replaces')
-        assert 50 == from_map
+        assert 52 == from_map
         return from_map
 
     @property
     def V5_DC_RELATION_ISREPLACEDBY_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.isreplacedby')
-        assert 51 == from_map
+        assert 53 == from_map
         return from_map
 
     @property
     def V5_DC_IDENTIFIER_URI_ID(self):
         from_map = self.get_field_id_by_name_v5('identifier.uri')
-        assert 25 == from_map
+        assert 27 == from_map
         return from_map
 
     @property
     def V5_DATE_ISSUED(self):
         from_map = self.get_field_id_by_name_v5('date.issued')
-        assert 15 == from_map
+        assert 17 == from_map
         return from_map
 
     @property

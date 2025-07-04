@@ -17,12 +17,12 @@ class tasklistitems:
             "tasks": 0,
         }
 
-        if len(self._tasks) == 0:
+        if not self._tasks:
             _logger.info(f"Empty input: [{tl_file_str}].")
             return
 
     def __len__(self):
-        return len(self._tasks)
+        return len(self._tasks) if self._tasks is not None else 0
 
     @property
     def imported(self):

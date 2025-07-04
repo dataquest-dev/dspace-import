@@ -19,13 +19,13 @@ class usermetadatas:
             "um": 0,
         }
 
-        if len(self._umeta) == 0:
+        if not self._umeta:
             _logger.info(f"Empty input: [{usermetadata_file_str}].")
 
-        if len(self._uallowance) == 0:
+        if not self._uallowance:
             _logger.info(f"Empty input: [{userallowance_file_str}].")
 
-        if len(self._rmap) == 0:
+        if not self._rmap:
             _logger.info(f"Empty input: [{resourcemapping_file_str}].")
 
         # mapping transaction_id to mapping_id
@@ -44,7 +44,7 @@ class usermetadatas:
             self._umeta_transid2ums.setdefault(t_id, []).append(um)
 
     def __len__(self):
-        return len(self._umeta)
+        return len(self._umeta) if self._umeta is not None else 0
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
@@ -56,7 +56,8 @@ class usermetadatas:
 
     @time_method
     def import_to(self, dspace, bitstreams, userregistrations):
-        expected = len(self._umeta_transid2ums)
+        expected = len(
+            self._umeta_transid2ums) if self._umeta_transid2ums is not None else 0
         log_key = "usermetadata"
         log_before_import(log_key, expected)
 
