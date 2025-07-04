@@ -35,6 +35,7 @@ def create_submitter_group_if_missing(dspace_be, endpoint, coll, group_uuid, sta
     without_submitter = False
     submitter_without_group = False
 
+    # Check if the collection has a submitter group
     url = f'{endpoint}/core/collections/{uuid}/submittersGroup'
     _logger.info(f"URL: {url}")
     response = dspace_be.client.api_get(url=url)
@@ -45,7 +46,7 @@ def create_submitter_group_if_missing(dspace_be, endpoint, coll, group_uuid, sta
         # 200 = OK, meaning submitter group exists
         response_json = response.json()
         fetched_submitter_group_uuid = response_json.get('uuid')
-        if 'uuid' is not None:
+        if fetched_submitter_group_uuid is not None:
             # Check if the submitter group has subgroups - there should be one which is passed as argument
             url = f'{endpoint}/eperson/groups/{fetched_submitter_group_uuid}/subgroups'
 
