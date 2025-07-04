@@ -130,7 +130,7 @@ class metadatas:
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                178 |                  3 |  bitstream  | redirectToURL |    Get the bitstream from this URL.
     IGNORE_FIELDS = [
-        176, 178
+        174, 177
     ]
 
     # fields which will be replaced in metadata
@@ -138,7 +138,7 @@ class metadatas:
     #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                98  |                  3 | hasMetadata |     null      |       Indicates uploaded cmdi file
-    REPLACE_FIELDS = [98]
+    REPLACE_FIELDS = [160]
 
     validate_table = [
         ["metadataschemaregistry", {
