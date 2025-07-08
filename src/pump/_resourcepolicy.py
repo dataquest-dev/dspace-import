@@ -89,8 +89,13 @@ class resourcepolicies:
             actionId = res_policy['action_id']
 
             # control, if action is entered correctly
-            if actionId < 0 or actionId >= (len(dspace_actions) if dspace_actions is not None else 0):
-                _logger.error(f"action_id [{actionId}] is out of range.")
+            if dspace_actions is None:
+                _logger.error("dspace_actions is None. Cannot validate actionId.")
+                failed += 1
+                continue
+            if actionId < 0 or actionId >= len(dspace_actions):
+                _logger.error(
+                    f"Invalid actionId: {actionId}. Must be in range 0 to {len(dspace_actions) - 1}")
                 failed += 1
                 continue
 

@@ -25,7 +25,7 @@ class userregistrations:
             return
 
     def __len__(self):
-        return len(self._ur) if self._ur is not None else 0
+        return len(self._ur or [])
 
     def uuid(self, e_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

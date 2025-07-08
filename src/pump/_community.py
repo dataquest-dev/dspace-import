@@ -87,7 +87,7 @@ class communities:
         counter = 0
 
         i = 0
-        while coms and len(coms) > 0:
+        while coms:
             counter += 1
 
             if counter > 200:
