@@ -257,64 +257,71 @@ class metadatas:
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.replaces')
-        assert 50 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'relation.replaces' in v5 not found.")
         return from_map
 
     @property
     def V5_DC_RELATION_ISREPLACEDBY_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.isreplacedby')
-        assert 51 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'relation.isreplacedby' in v5 not found.")
         return from_map
 
     @property
     def V5_DC_IDENTIFIER_URI_ID(self):
         from_map = self.get_field_id_by_name_v5('identifier.uri')
-        assert 25 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'identifier.uri' in v5 not found.")
         return from_map
 
     @property
     def V5_DATE_ISSUED(self):
         from_map = self.get_field_id_by_name_v5('date.issued')
-        assert 15 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'date.issued' in v5 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_LIC(self):
-        return 63
-        from_map = self.get_field_id_by_name('date.issued')
-        assert 63 == from_map
+        from_map = self.get_field_id_by_name('rights.uri')
+        if from_map is None:
+            raise ValueError("Field ID for 'rights.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_DATE_ISSUED(self):
-        return 22
+        from_map = self.get_field_id_by_name('date.issued')
+        if from_map is None:
+            raise ValueError("Field ID for 'date.issued' in v7 not found.")
+        return from_map
 
     @property
     def V7_FIELD_LANG_ADDED(self):
-        return 149
-        from_map = self.get_field_id_by_name('date.issued')
-        assert 149 == from_map
+        from_map = self.get_field_id_by_name('language.name')
+        if from_map is None:
+            raise ValueError("Field ID for 'language.name' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_IDENTIFIER_URI(self):
-        return 34
         from_map = self.get_field_id_by_name('identififer.uri')
-        assert 34 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'identififer.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_TITLE(self):
-        return 74
         from_map = self.get_field_id_by_name('title.None')
-        assert 74 == from_map
+        if from_map is None:
+            raise ValueError("Field ID for 'title.None' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_PROVENANCE(self):
-        return 37
-        from_map = self.get_field_id_by_name('provenance.None')
-        assert 37 == from_map
+        from_map = self.get_field_id_by_name('description.provenance')
+        if from_map is None:
+            raise ValueError("Field ID for 'description.provenance' in v7 not found.")
         return from_map
 
     # =====
