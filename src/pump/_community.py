@@ -79,18 +79,18 @@ class communities:
             childs.setdefault(child_id, []).append(parent_id)
 
         for arr in childs.values():
-            if arr is None or len(arr) != 1:
+            if len(arr) != 1:
                 _logger.critical(f"Strange child array: [{arr}]")
 
         coms = self._com.copy()
 
-        iter = 0
+        counter = 0
 
         i = 0
         while coms and len(coms) > 0:
-            iter += 1
+            counter += 1
 
-            if iter > 200:
+            if counter > 200:
                 _logger.critical(
                     "Very likely in the process of infinite loop because importing to existing db.")
                 break
