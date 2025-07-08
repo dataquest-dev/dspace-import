@@ -34,7 +34,7 @@ class communities:
         self._groups = {}
 
     def __len__(self):
-        return len(self._com)
+        return len(self._com) if self._com is not None else 0
 
     @property
     def logos(self):
@@ -79,7 +79,7 @@ class communities:
             childs.setdefault(child_id, []).append(parent_id)
 
         for arr in childs.values():
-            if len(arr) != 1:
+            if arr is None or len(arr) != 1:
                 _logger.critical(f"Strange child array: [{arr}]")
 
         coms = self._com.copy()
@@ -87,7 +87,7 @@ class communities:
         iter = 0
 
         i = 0
-        while len(coms) > 0:
+        while coms and len(coms) > 0:
             iter += 1
 
             if iter > 200:

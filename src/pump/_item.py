@@ -1,4 +1,3 @@
-import datetime
 import logging
 from ._utils import read_json, serialize, deserialize, time_method, progress_bar, log_before_import, log_after_import
 
@@ -56,19 +55,19 @@ class items:
                  col2item_file_str: str):
 
         self._items = read_json(item_file_str)
-        if len(self._items) == 0:
+        if not self._items:
             _logger.info(f"Empty input: [{item_file_str}].")
 
         self._ws_items = read_json(ws_file_str)
-        if len(self._ws_items) == 0:
+        if not self._ws_items:
             _logger.info(f"Empty input: [{ws_file_str}].")
 
         self._wf_items = read_json(wf_file_str)
-        if len(self._wf_items) == 0:
+        if not self._wf_items:
             _logger.info(f"Empty input: [{wf_file_str}].")
 
         self._col2item = read_json(col2item_file_str)
-        if len(self._col2item) == 0:
+        if not self._col2item:
             _logger.info(f"Empty input: [{col2item_file_str}].")
 
         self._id2item = {str(e['item_id']): e for e in self._items}
@@ -95,7 +94,7 @@ class items:
         }
 
     def __len__(self):
-        return len(self._items)
+        return len(self._items) if self._items is not None else 0
 
     def find_by_uuid(self, uuid: str):
         for k, item_uuid in self._id2uuid.items():
@@ -223,7 +222,7 @@ class items:
         return True, ws_id
 
     def _ws_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._ws_items)
+        expected = len(self._ws_items) if self._ws_items is not None else 0
         log_key = "workspaceitems"
         log_before_import(log_key, expected)
 
@@ -237,7 +236,7 @@ class items:
         log_after_import(log_key, expected, self.imported_ws)
 
     def _wf_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._wf_items)
+        expected = len(self._wf_items) if self._wf_items is not None else 0
         log_key = "workflowitems"
         log_before_import(log_key, expected)
 
@@ -266,7 +265,7 @@ class items:
         log_after_import(log_key, expected, self.imported_wf)
 
     def _item_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._items)
+        expected = len(self._items) if self._items is not None else 0
         log_key = "items"
         log_before_import(log_key, expected)
 
@@ -346,7 +345,8 @@ class items:
             col_uuid = collections.uuid(col['collection_id'])
             self._col_id2uuid.setdefault(item_uuid, []).append(col_uuid)
 
-        to_import = [x for x in self._col_id2uuid.items() if len(x[1]) > 1]
+        to_import = [x for x in self._col_id2uuid.items() if len(
+            x[1]) > 1] if self._col_id2uuid is not None else []
         expected = len(to_import)
         log_key = "items coll"
         log_before_import(log_key, expected)
@@ -406,7 +406,8 @@ class items:
 
     def _migrate_versions(self, env, db7, db5_dspace, metadatas):
         _logger.info(
-            f"Migrating versions [{len(self._id2item)}], already done:[{len(self._migrated_versions)}]")
+            f"Migrating versions [{len(self._id2item) if self._id2item is not None else 0}], "
+            f"already done:[{len(self._migrated_versions) if self._migrated_versions is not None else 0}]")
 
         admin_username = env["backend"]["user"]
         admin_uuid = db7.get_admin_uuid(admin_username)
@@ -461,10 +462,10 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 # `metadata_schema_id = 1` is `dc`
                 version_date_issued = db7.fetch_one("SELECT text_value from metadatavalue " +
                                                     f"where dspace_object_id = '{item_uuid}' " +
-                                                    f"and metadata_field_id in " +
-                                                        "(select metadata_field_id from metadatafieldregistry " +
-                                                        "where metadata_schema_id = 1 and element = 'date' " +
-                                                        "and qualifier = 'issued');")
+                                                    "and metadata_field_id in " +
+                                                    "(select metadata_field_id from metadatafieldregistry " +
+                                                    "where metadata_schema_id = 1 and element = 'date' " +
+                                                    "and qualifier = 'issued');")
                 db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
                             f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
                             f"({versionitem_new_id}, {index}, TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD'), "
@@ -474,7 +475,8 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 versionitem_new_id += 1
                 self._migrated_versions.append(str(item_id))
 
-        _logger.info(f"Migrated versions [{len(self._migrated_versions)}]")
+        _logger.info(
+            f"Migrated versions [{len(self._migrated_versions) if self._migrated_versions is not None else 0}]")
 
     def raw_after_import(self, env, db7, db5_dspace, metadatas):
         # Migration process
@@ -543,7 +545,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
         previous_versions = previous_versions[::-1]
 
         # If this item does not have any version return a None
-        if len(newer_versions) == 0 and len(previous_versions) == 0:
+        if not newer_versions and not previous_versions:
             return None
 
         # Get handle of the current Item
@@ -592,9 +594,9 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             # in v5, we stored it after item installation
 
             problematic.append(uuid7)
-        if len(problematic) > 0:
+        if problematic:
             _logger.warning(
-                f'We have [{len(problematic)}] versions in v7 `versionitem` that are not expected!')
+                f'We have [{len(problematic) if problematic is not None else 0}] versions in v7 `versionitem` that are not expected!')
             for uuid in problematic:
                 _logger.warning(f'UUID: {uuid}')
 
@@ -610,7 +612,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 continue
 
             problematic.append(uuid5)
-        if len(problematic) > 0:
+        if problematic:
             _logger.warning(
                 f'We have [{len(problematic)}] versions in v5 not migrated into `versionitem`!')
             for uuid in problematic:

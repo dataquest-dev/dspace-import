@@ -23,12 +23,12 @@ class registrationdatas:
             "missing_email": 0,
         }
 
-        if len(self._rd) == 0:
+        if not self._rd:
             _logger.info(f"Empty input: [{col_rd_str}].")
             return
 
     def __len__(self):
-        return len(self._rd)
+        return len(self._rd) if self._rd is not None else 0
 
     @property
     def imported(self):
