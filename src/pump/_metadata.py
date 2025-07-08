@@ -166,21 +166,27 @@ class metadatas:
         }
     ]
 
-    def __init__(self, env, dspace, value_file_str: str, field_file_str: str, schema_file_str: str):
+    def __init__(self, env, dspace, field_file_v7_str: str, value_file_v5_str: str,
+                 field_file_v5_str: str, schema_file_v5_str: str):
         self._dspace = dspace
         self._values = {}
 
-        self._fields = read_json(field_file_str)
+        self._field_v7 = read_json(field_file_v7_str)
+        self._field_v7_existed = {}
+        for f in self._field_v7:
+            self._field_v7_existed[f"{f['element']}.{f['qualifier']}"] = f['metadata_field_id']
+
+        self._fields_v5 = read_json(field_file_v5_str)
         self._fields_id2v7id = {}
-        self._fields_id2js = {x['metadata_field_id']: x for x in self._fields}
+        self._fields_id2js_v5 = {x['metadata_field_id']: x for x in self._fields_v5}
         self._v5_fields_name2id = {}
         self._v7_fields_name2id = {}
-        for f in self.fields:
+        for f in self._fields_v5:
             self._v5_fields_name2id[f"{f['element']}.{f['qualifier']}"] = f['metadata_field_id']
 
-        self._schemas = read_json(schema_file_str)
-        self._schemas_id2id = {}
-        self._schemas_id2js = {x['metadata_schema_id']: x for x in self._schemas}
+        self._schemas_v5 = read_json(schema_file_v5_str)
+        self._schemas_id2id_v5 = {}
+        self._schemas_id2js_v5 = {x['metadata_schema_id']: x for x in self._schemas_v5}
 
         # read dynamically
         self._versions = {}
@@ -195,14 +201,14 @@ class metadatas:
 
         # Find out which field is `local.sponsor`, check only `sponsor` string
         sponsor_field_id = -1
-        sponsors = [x for x in self._fields if x['element'] == 'sponsor']
+        sponsors = [x for x in self._fields_v5 if x['element'] == 'sponsor']
         if len(sponsors) != 1:
             _logger.warning(f"Found [{len(sponsors)}] elements with name [sponsor]")
         else:
             sponsor_field_id = sponsors[0]['metadata_field_id']
 
         # norm
-        js_value = read_json(value_file_str)
+        js_value = read_json(value_file_v5_str)
         for val in js_value:
             # replace separator @@ by ;
             val['text_value'] = val['text_value'].replace("@@", ";")
@@ -254,6 +260,9 @@ class metadatas:
         """
         return self._v5_fields_name2id.get(name, None)
 
+    def get_existed_field_by_name_v7(self, name: str):
+        return self._field_v7_existed.get(name, str)
+
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.replaces')
@@ -284,42 +293,42 @@ class metadatas:
 
     @property
     def V7_FIELD_ID_LIC(self):
-        from_map = self.get_field_id_by_name('rights.uri')
+        from_map = self.get_existed_field_by_name_v7('rights.uri')
         if from_map is None:
             raise ValueError("Field ID for 'rights.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_DATE_ISSUED(self):
-        from_map = self.get_field_id_by_name('date.issued')
+        from_map = self.get_existed_field_by_name_v7('date.issued')
         if from_map is None:
             raise ValueError("Field ID for 'date.issued' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_LANG_ADDED(self):
-        from_map = self.get_field_id_by_name('language.name')
+        from_map = self.get_existed_field_by_name_v7('language.name')
         if from_map is None:
             raise ValueError("Field ID for 'language.name' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_IDENTIFIER_URI(self):
-        from_map = self.get_field_id_by_name('identififer.uri')
+        from_map = self.get_existed_field_by_name_v7('identififer.uri')
         if from_map is None:
             raise ValueError("Field ID for 'identififer.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_TITLE(self):
-        from_map = self.get_field_id_by_name('title.None')
+        from_map = self.get_existed_field_by_name_v7('title.None')
         if from_map is None:
             raise ValueError("Field ID for 'title.None' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_PROVENANCE(self):
-        from_map = self.get_field_id_by_name('description.provenance')
+        from_map = self.get_existed_field_by_name_v7.get('description.provenance', None)
         if from_map is None:
             raise ValueError("Field ID for 'description.provenance' in v7 not found.")
         return from_map
@@ -328,11 +337,11 @@ class metadatas:
 
     @property
     def schemas(self):
-        return self._schemas
+        return self._schemas_v5
 
     @property
     def fields(self):
-        return self._fields
+        return self._fields_v5
 
     @property
     def versions(self):
@@ -362,27 +371,29 @@ class metadatas:
     # =============
 
     def schema_id(self, internal_id: int):
-        return self._schemas_id2id.get(str(internal_id), None)
+        return self._schemas_id2id_v5.get(str(internal_id), None)
 
     # =============
 
     def serialize(self, file_str: str):
         data = {
-            "schemas_id2id": self._schemas_id2id,
+            "schemas_id2id_v5": self._schemas_id2id_v5,
             "fields_id2v7id": self._fields_id2v7id,
             "imported": self._imported,
             "v5_fields_name2id": self._v5_fields_name2id,
             "v7_fields_name2id": self._v7_fields_name2id,
+            "field_v7_existed": self._field_v7_existed,
         }
         serialize(file_str, data)
 
     def deserialize(self, file_str: str):
         data = deserialize(file_str)
-        self._schemas_id2id = data["schemas_id2id"]
+        self._schemas_id2id_v5 = data["schemas_id2id_v5"]
         self._fields_id2v7id = data["fields_id2v7id"]
         self._imported = data["imported"]
         self._v5_fields_name2id = data["v5_fields_name2id"]
         self._v7_fields_name2id = data["v7_fields_name2id"]
+        self._field_v7_existed = data["field_v7_existed"]
 
     # =============
 
@@ -406,7 +417,7 @@ class metadatas:
             Import data into database.
             Mapped tables: metadataschemaregistry
         """
-        expected = len(self._schemas)
+        expected = len(self._schemas_v5)
         log_key = "metadata schemas"
         log_before_import(log_key, expected)
 
@@ -419,7 +430,7 @@ class metadatas:
         def find_existing_prefix(short_id: str):
             return next((e for e in existed_schemas if e['prefix'] == short_id), None)
 
-        for schema in progress_bar(self._schemas):
+        for schema in progress_bar(self._schemas_v5):
             meta_id = schema['metadata_schema_id']
 
             # exists in the database
@@ -428,7 +439,7 @@ class metadatas:
                 _logger.debug(
                     f'Metadataschemaregistry prefix: {schema["short_id"]} already exists!')
                 self._imported["schema_existed"] += 1
-                self._schemas_id2id[str(meta_id)] = existing['id']
+                self._schemas_id2id_v5[str(meta_id)] = existing['id']
                 continue
 
             # only prefix exists, but there is unique constraint on prefix in the databse
@@ -438,7 +449,7 @@ class metadatas:
                     f'Metadata_schema short_id {schema["short_id"]} '
                     f'exists in database with different namespace: {existing["namespace"]}.')
                 self._imported["schema_existed"] += 1
-                self._schemas_id2id[str(meta_id)] = existing['id']
+                self._schemas_id2id_v5[str(meta_id)] = existing['id']
                 continue
 
             data = {
@@ -447,7 +458,7 @@ class metadatas:
             }
             try:
                 resp = dspace.put_metadata_schema(data)
-                self._schemas_id2id[str(meta_id)] = resp['id']
+                self._schemas_id2id_v5[str(meta_id)] = resp['id']
                 self._imported["schema_imported"] += 1
             except Exception as e:
                 _logger.error(
@@ -461,7 +472,7 @@ class metadatas:
             Import data into database.
             Mapped tables: metadatafieldregistry
         """
-        expected = len(self._fields)
+        expected = len(self._fields_v5)
         log_key = "metadata fields"
         log_before_import(log_key, expected)
 
@@ -481,7 +492,7 @@ class metadatas:
             return None
 
         existing_arr = []
-        for field in progress_bar(self._fields):
+        for field in progress_bar(self._fields_v5):
             field_id = field["metadata_field_id"]
             schema_id = field['metadata_schema_id']
             e = field['element']
@@ -552,12 +563,12 @@ class metadatas:
             Using data.
         """
         int_meta_field_id = val['metadata_field_id']
-        field_js = self._fields_id2js.get(int_meta_field_id, None)
+        field_js = self._fields_id2js_v5.get(int_meta_field_id, None)
         if field_js is None:
             return None
         # get metadataschema
         schema_id = field_js["metadata_schema_id"]
-        schema_js = self._schemas_id2js.get(schema_id, None)
+        schema_js = self._schemas_id2js_v5.get(schema_id, None)
         if schema_js is None:
             return None
         # define and insert key and value of dict

@@ -51,7 +51,8 @@ settings = {
     },
 
     "input": {
-        "tempdbexport": os.path.join(_this_dir, "../input/tempdbexport"),
+        "tempdbexport_v5": os.path.join(_this_dir, "../input/tempdbexport_v5"),
+        "tempdbexport_v7": os.path.join(_this_dir, "../input/tempdbexport_v7"),
         "icondir": os.path.join(_this_dir, "../input/icon"),
     },
 

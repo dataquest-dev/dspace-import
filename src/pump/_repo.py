@@ -40,20 +40,26 @@ class repo:
     def __init__(self, env: dict, dspace):
         self.raw_db_dspace_5 = db(env["db_dspace_5"])
         self.raw_db_utilities_5 = db(env["db_utilities_5"])
+        self.raw_db_7 = db(env["db_dspace_7"])
 
         if not env["tempdb"]:
             # remove directory
-            if os.path.exists(env["input"]["tempdbexport"]):
-                shutil.rmtree(env["input"]["tempdbexport"])
+            if os.path.exists(env["input"]["tempdbexport_v5"]):
+                shutil.rmtree(env["input"]["tempdbexport_v5"])
+
+        if not env["tempdb"]:
+            # remove directory
+            if os.path.exists(env["input"]["tempdbexport_v7"]):
+                shutil.rmtree(env["input"]["tempdbexport_v7"])
 
         tables_db_5 = [x for arr in self.raw_db_dspace_5.all_tables() for x in arr]
         tables_utilities_5 = [x for arr in self.raw_db_utilities_5.all_tables()
                               for x in arr]
 
         def _f(table_name):
-            """ Dynamically export the table to json file and return path to it. """
-            os.makedirs(env["input"]["tempdbexport"], exist_ok=True)
-            out_f = os.path.join(env["input"]["tempdbexport"], f"{table_name}.json")
+            """ Dynamically export the table to json file and return path to it in v5. """
+            os.makedirs(env["input"]["tempdbexport_v5"], exist_ok=True)
+            out_f = os.path.join(env["input"]["tempdbexport_v5"], f"{table_name}.json")
             if not env["tempdb"]:
                 if table_name in tables_db_5:
                     db = self.raw_db_dspace_5
@@ -63,6 +69,14 @@ class repo:
                     _logger.warning(f"Table [{table_name}] not found in db.")
                     raise NotImplementedError(f"Table [{table_name}] not found in db.")
                 export_table(db, table_name, out_f)
+            return out_f
+
+        def _f_7(table_name):
+            """ Dynamically export the table to json file and return path to it for DSpace 7. """
+            os.makedirs(env["input"]["tempdbexport_v7"], exist_ok=True)
+            out_f = os.path.join(env["input"]["tempdbexport_v7"], f"{table_name}.json")
+            if not env["tempdb"]:
+                export_table(self.raw_db_7, table_name, out_f)
             return out_f
 
         # load groups
@@ -79,6 +93,7 @@ class repo:
         self.metadatas = metadatas(
             env,
             dspace,
+            _f_7("metadatafieldregistry"),
             _f("metadatavalue"),
             _f("metadatafieldregistry"),
             _f("metadataschemaregistry"),
@@ -152,8 +167,6 @@ class repo:
         self.resourcepolicies = resourcepolicies(
             _f("resourcepolicy")
         )
-
-        self.raw_db_7 = db(env["db_dspace_7"])
 
         self.sequences = sequences()
 
