@@ -39,7 +39,7 @@ def _metadatavalue_process(repo, v5data: list, v7data: list):
             continue
 
         # ignore file preview in metadata
-        if field_id in metadatas.IGNORE_FIELDS or field_id in metadatas.REPLACE_FIELDS:
+        if field_id in repo.metadatas.ignored_fields or field_id in repo.metadatas.replaced_fields:
             continue
 
         uuid = repo.uuid(res_type_id, res_id)
@@ -121,25 +121,6 @@ class metadatas:
         SQL:
             delete from metadatavalue ; delete from metadatafieldregistry ; delete from metadataschemaregistry ;
     """
-
-    # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=176 ;
-    #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
-    # -------------------+--------------------+-------------+---------------+----------------------------------------
-    #                176 |                  3 |  bitstream  |     file      | Files inside a bitstream if an archive
-    # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=178 ;
-    # -------------------+--------------------+-------------+---------------+----------------------------------------
-    #                178 |                  3 |  bitstream  | redirectToURL |    Get the bitstream from this URL.
-    IGNORE_FIELDS = [
-        176, 178
-    ]
-
-    # fields which will be replaced in metadata
-    # if we want to ignore the metadata field, we must replace field when metadata is imported!
-    #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
-    # -------------------+--------------------+-------------+---------------+----------------------------------------
-    #                98  |                  3 | hasMetadata |     null      |       Indicates uploaded cmdi file
-    REPLACE_FIELDS = [98]
-
     validate_table = [
         ["metadataschemaregistry", {
             "compare": ["namespace", "short_id"],
@@ -166,15 +147,21 @@ class metadatas:
         }
     ]
 
-    def __init__(self, env, dspace, field_file_v7_str: str, value_file_v5_str: str,
+    def __init__(self, env, dspace, field_file_v7_str: str, schema_file_v7_str: str, value_file_v5_str: str,
                  field_file_v5_str: str, schema_file_v5_str: str):
         self._dspace = dspace
         self._values = {}
 
         self._field_v7 = read_json(field_file_v7_str)
+        self._schema_v7 = read_json(schema_file_v7_str)
+        self._schema_id2short_id_v7 = {}
+        for f in self._schema_v7:
+            self._schema_id2short_id_v7[f['metadata_schema_id']] = f['short_id']
         self._field_v7_existed = {}
         for f in self._field_v7:
-            self._field_v7_existed[f"{f['element']}.{f['qualifier']}"] = f['metadata_field_id']
+            self._field_v7_existed[
+                f"{self._schema_id2short_id_v7[f['metadata_schema_id']]}.{f['element']}.{f['qualifier']}"] =\
+                f['metadata_field_id']
 
         self._fields_v5 = read_json(field_file_v5_str)
         self._fields_id2v7id = {}
@@ -199,6 +186,13 @@ class metadatas:
             "replaced_field": 0,
         }
 
+        # clarin-dspace
+        self._ignored_fields = env["ignore"]["fields"]
+
+        # dspace
+        # fields which will be replaced in metadata
+        self._replaced_fields = env["replace"]["fields"]
+
         # Find out which field is `local.sponsor`, check only `sponsor` string
         sponsor_field_id = -1
         sponsors = [x for x in self._fields_v5 if x['element'] == 'sponsor']
@@ -222,10 +216,10 @@ class metadatas:
         # ignore file preview in metadata and others
         orig_len = len(js_value)
         js_value = [x for x in js_value if x["metadata_field_id"]
-                    not in metadatas.IGNORE_FIELDS]
+                    not in self.ignored_fields]
         if orig_len != len(js_value):
             _logger.warning(
-                f"Ignoring metadata fields [{metadatas.IGNORE_FIELDS}], len:[{orig_len}->{len(js_value)}]")
+                f"Ignoring metadata fields [{self.ignored_fields}], len:[{orig_len}->{len(js_value)}]")
 
         # fill values
         for val in js_value:
@@ -261,7 +255,7 @@ class metadatas:
         return self._v5_fields_name2id.get(name, None)
 
     def get_existed_field_by_name_v7(self, name: str):
-        return self._field_v7_existed.get(name, str)
+        return self._field_v7_existed.get(name, None)
 
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
@@ -293,47 +287,45 @@ class metadatas:
 
     @property
     def V7_FIELD_ID_LIC(self):
-        from_map = self.get_existed_field_by_name_v7('rights.uri')
+        from_map = self.get_existed_field_by_name_v7('dc.rights.uri')
         if from_map is None:
             raise ValueError("Field ID for 'rights.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_DATE_ISSUED(self):
-        from_map = self.get_existed_field_by_name_v7('date.issued')
+        from_map = self.get_existed_field_by_name_v7('dc.date.issued')
         if from_map is None:
             raise ValueError("Field ID for 'date.issued' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_LANG_ADDED(self):
-        from_map = self.get_existed_field_by_name_v7('language.name')
+        from_map = self.get_existed_field_by_name_v7('local.language.name')
         if from_map is None:
             raise ValueError("Field ID for 'language.name' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_IDENTIFIER_URI(self):
-        from_map = self.get_existed_field_by_name_v7('identififer.uri')
+        from_map = self.get_existed_field_by_name_v7('dc.identifier.uri')
         if from_map is None:
-            raise ValueError("Field ID for 'identififer.uri' in v7 not found.")
+            raise ValueError("Field ID for 'identifier.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_TITLE(self):
-        from_map = self.get_existed_field_by_name_v7('title.None')
+        from_map = self.get_existed_field_by_name_v7('dc.title.None')
         if from_map is None:
             raise ValueError("Field ID for 'title.None' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_PROVENANCE(self):
-        from_map = self.get_existed_field_by_name_v7.get('description.provenance', None)
+        from_map = self.get_existed_field_by_name_v7('dc.description.provenance')
         if from_map is None:
             raise ValueError("Field ID for 'description.provenance' in v7 not found.")
         return from_map
-
-    # =====
 
     @property
     def schemas(self):
@@ -362,6 +354,14 @@ class metadatas:
     @property
     def existed_fields(self):
         return self._imported['field_existed']
+
+    @property
+    def replaced_fields(self):
+        return self._replaced_fields
+
+    @property
+    def ignored_fields(self):
+        return self._ignored_fields
 
     @time_method
     def import_to(self, dspace):
@@ -504,7 +504,7 @@ class metadatas:
                 existing_arr.append(field)
                 ext_field_id = existing['id']
                 self._imported["field_existed"] += 1
-            elif field_id in metadatas.REPLACE_FIELDS:
+            elif field_id in self.replaced_fields:
                 self._imported["replaced_field"] += 1
                 continue
             else:
@@ -611,7 +611,7 @@ class metadatas:
         vals = tp_values[res_id]
 
         vals = [x for x in vals if (self.exists_field(x['metadata_field_id']) or
-                                    x['metadata_field_id'] in metadatas.REPLACE_FIELDS)]
+                                    x['metadata_field_id'] in self.replaced_fields)]
         if len(vals) == 0:
             return {}
 

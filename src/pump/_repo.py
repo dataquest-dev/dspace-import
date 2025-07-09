@@ -94,6 +94,7 @@ class repo:
             env,
             dspace,
             _f_7("metadatafieldregistry"),
+            _f_7("metadataschemaregistry"),
             _f("metadatavalue"),
             _f("metadatafieldregistry"),
             _f("metadataschemaregistry"),
