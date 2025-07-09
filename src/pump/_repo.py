@@ -43,14 +43,9 @@ class repo:
         self.raw_db_7 = db(env["db_dspace_7"])
 
         if not env["tempdb"]:
-            # remove directory
-            if os.path.exists(env["input"]["tempdbexport_v5"]):
-                shutil.rmtree(env["input"]["tempdbexport_v5"])
-
-        if not env["tempdb"]:
-            # remove directory
-            if os.path.exists(env["input"]["tempdbexport_v7"]):
-                shutil.rmtree(env["input"]["tempdbexport_v7"])
+            for path in [env["input"]["tempdbexport_v5"], env["input"]["tempdbexport_v7"]]:
+                if os.path.exists(path):
+                    shutil.rmtree(path)
 
         tables_db_5 = [x for arr in self.raw_db_dspace_5.all_tables() for x in arr]
         tables_utilities_5 = [x for arr in self.raw_db_utilities_5.all_tables()
