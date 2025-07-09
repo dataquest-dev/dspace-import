@@ -289,42 +289,42 @@ class metadatas:
     def V7_FIELD_ID_LIC(self):
         from_map = self.get_existed_field_by_name_v7('dc.rights.uri')
         if from_map is None:
-            raise ValueError("Field ID for 'rights.uri' in v7 not found.")
+            raise ValueError("Field ID for 'dc.rights.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_DATE_ISSUED(self):
         from_map = self.get_existed_field_by_name_v7('dc.date.issued')
         if from_map is None:
-            raise ValueError("Field ID for 'date.issued' in v7 not found.")
+            raise ValueError("Field ID for 'dc.date.issued' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_LANG_ADDED(self):
         from_map = self.get_existed_field_by_name_v7('local.language.name')
         if from_map is None:
-            raise ValueError("Field ID for 'language.name' in v7 not found.")
+            raise ValueError("Field ID for 'local.language.name' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_IDENTIFIER_URI(self):
         from_map = self.get_existed_field_by_name_v7('dc.identifier.uri')
         if from_map is None:
-            raise ValueError("Field ID for 'identifier.uri' in v7 not found.")
+            raise ValueError("Field ID for 'dc.identifier.uri' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_TITLE(self):
         from_map = self.get_existed_field_by_name_v7('dc.title.None')
         if from_map is None:
-            raise ValueError("Field ID for 'title.None' in v7 not found.")
+            raise ValueError("Field ID for 'dc.title.None' in v7 not found.")
         return from_map
 
     @property
     def V7_FIELD_ID_PROVENANCE(self):
         from_map = self.get_existed_field_by_name_v7('dc.description.provenance')
         if from_map is None:
-            raise ValueError("Field ID for 'description.provenance' in v7 not found.")
+            raise ValueError("Field ID for 'dc.description.provenance' in v7 not found.")
         return from_map
 
     @property
@@ -382,7 +382,6 @@ class metadatas:
             "imported": self._imported,
             "v5_fields_name2id": self._v5_fields_name2id,
             "v7_fields_name2id": self._v7_fields_name2id,
-            "field_v7_existed": self._field_v7_existed,
         }
         serialize(file_str, data)
 
@@ -393,7 +392,6 @@ class metadatas:
         self._imported = data["imported"]
         self._v5_fields_name2id = data["v5_fields_name2id"]
         self._v7_fields_name2id = data["v7_fields_name2id"]
-        self._field_v7_existed = data["field_v7_existed"]
 
     # =============
 
