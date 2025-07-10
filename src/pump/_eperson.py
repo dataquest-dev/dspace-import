@@ -113,7 +113,7 @@ class epersons:
             params = {
                 'selfRegistered': e.get('self_registered'),
                 'lastActive': e.get('last_active'),
-                'password': e.get('password'),
+                'passwordHashStr': e.get('password'),
                 'salt': e.get('salt'),
                 'digestAlgorithm': e.get('digest_algorithm')
             }
