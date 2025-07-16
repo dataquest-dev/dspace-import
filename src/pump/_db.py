@@ -185,8 +185,11 @@ class tester:
 
     @staticmethod
     def get_list_val(part: list, pos: int):
-        if part is not None and 0 <= pos < len(part):
-            return part[pos]
+        if part is not None:
+            if pos < 0:
+                return None
+            if 0 <= pos < len(part):
+                return part[pos]
         return None
 
     @staticmethod
@@ -317,9 +320,9 @@ class differ:
         too_many_5 = ""
         too_many_7 = ""
         LIMIT = 5
-        if only_in_5 and len(only_in_5) > LIMIT:
+        if len(only_in_5 or []) > LIMIT:
             too_many_5 = f"!!! TOO MANY [{len(only_in_5)}] "
-        if only_in_7 and len(only_in_7) > LIMIT:
+        if len(only_in_7 or []) > LIMIT:
             too_many_7 = f"!!! TOO MANY [{len(only_in_7)}] "
 
         do_not_show = do_not_show or "CI" in os.environ or "GITHUB_ACTION" in os.environ
@@ -329,8 +332,8 @@ class differ:
             only_in_7 = [x if "@" not in x else "....." for x in only_in_7]
 
         _logger.info(
-            f"Table [{table_name}]: v5:[{len(vals5) if vals5 is not None else 0}], "
-            f"v7:[{len(vals7) if vals7 is not None else 0}]\n"
+            f"Table [{table_name}]: v5:[{len(vals5 or [])}], "
+            f"v7:[{len(vals7 or [])}]\n"
             f"  {too_many_5 or ''}only in v5:[{(only_in_5[:LIMIT] if only_in_5 else [])}]\n"
             f"  {too_many_7 or ''}only in v7:[{(only_in_7[:LIMIT] if only_in_7 else [])}]"
         )

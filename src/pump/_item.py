@@ -345,8 +345,7 @@ class items:
             col_uuid = collections.uuid(col['collection_id'])
             self._col_id2uuid.setdefault(item_uuid, []).append(col_uuid)
 
-        to_import = [x for x in self._col_id2uuid.items() if len(
-            x[1]) > 1] if self._col_id2uuid else []
+        to_import = [x for x in (self._col_id2uuid or {}).items()]
         expected = len(to_import)
         log_key = "items coll"
         log_before_import(log_key, expected)
@@ -406,8 +405,8 @@ class items:
 
     def _migrate_versions(self, env, db7, db5_dspace, metadatas):
         _logger.info(
-            f"Migrating versions [{len(self._id2item) if self._id2item else 0}], "
-            f"already done:[{len(self._migrated_versions) if self._migrated_versions else 0}]")
+            f"Migrating versions [{len(self._id2item or {})}], "
+            f"already done:[{len(self._migrated_versions or [])}]")
 
         admin_username = env["backend"]["user"]
         admin_uuid = db7.get_admin_uuid(admin_username)
@@ -476,7 +475,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 self._migrated_versions.append(str(item_id))
 
         _logger.info(
-            f"Migrated versions [{len(self._migrated_versions) if self._migrated_versions else 0}]")
+            f"Migrated versions [{len(self._migrated_versions or [])}]")
 
     def raw_after_import(self, env, db7, db5_dspace, metadatas):
         # Migration process
@@ -596,7 +595,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             problematic.append(uuid7)
         if problematic:
             _logger.warning(
-                f'We have [{len(problematic) if problematic else 0}] versions in v7 `versionitem` that are not expected!')
+                f'We have [{len(problematic or [])}] versions in v7 `versionitem` that are not expected!')
             for uuid in problematic:
                 _logger.warning(f'UUID: {uuid}')
 
