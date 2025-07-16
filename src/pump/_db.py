@@ -75,7 +75,7 @@ class db:
     def exe_sql(self, sql_text: str):
         with self._conn as cursor:
             sql_lines = [x.strip()
-                         for x in (sql_text or "").splitlines() if len(x.strip()) > 0]
+                         for x in (sql_text or "").splitlines() if x.strip()]
             for sql in sql_lines:
                 cursor.execute(sql)
             return
@@ -185,9 +185,7 @@ class tester:
 
     @staticmethod
     def get_list_val(part: list, pos: int):
-        if part is None:
-            return None
-        if 0 <= pos < len(part):
+        if part is not None and 0 <= pos < len(part):
             return part[pos]
         return None
 
@@ -348,7 +346,7 @@ class differ:
 
         only_in_5 = list(set(vals5_cmp).difference(vals7_cmp))
         only_in_7 = list(set(vals7_cmp).difference(vals5_cmp))
-        if (only_in_5 and len(only_in_5) or 0) + (only_in_7 and len(only_in_7) or 0) == 0:
+        if not (only_in_5 or only_in_7):
             _logger.info(f"Table [{table_name: >20}] is THE SAME in v5 and v7!")
             return
         self._cmp_values(table_name, vals5, only_in_5, vals7, only_in_7, do_not_show)
@@ -359,10 +357,10 @@ class differ:
         cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name)
         do_not_show = gdpr and "email" in nonnull
 
-        len_vals5 = len(vals5) if vals5 is not None else 0
-        len_vals7 = len(vals7) if vals7 is not None else 0
+        len_vals5 = len(vals5 or [])
+        len_vals7 = len(vals7 or [])
 
-        if len_vals5 != len_vals7 and sql is not None:
+        if len_vals5 != len_vals7 and sql:
             cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name, sql)
             sql_info = True
 

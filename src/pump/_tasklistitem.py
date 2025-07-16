@@ -22,7 +22,7 @@ class tasklistitems:
             return
 
     def __len__(self):
-        return len(self._tasks) if self._tasks is not None else 0
+        return len(self._tasks or {})
 
     @property
     def imported(self):

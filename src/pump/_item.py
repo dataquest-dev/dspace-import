@@ -94,7 +94,7 @@ class items:
         }
 
     def __len__(self):
-        return len(self._items) if self._items is not None else 0
+        return len(self._items or {})
 
     def find_by_uuid(self, uuid: str):
         for k, item_uuid in self._id2uuid.items():
@@ -222,7 +222,7 @@ class items:
         return True, ws_id
 
     def _ws_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._ws_items) if self._ws_items is not None else 0
+        expected = len(self._ws_items or {})
         log_key = "workspaceitems"
         log_before_import(log_key, expected)
 
@@ -236,7 +236,7 @@ class items:
         log_after_import(log_key, expected, self.imported_ws)
 
     def _wf_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._wf_items) if self._wf_items is not None else 0
+        expected = len(self._wf_items or {})
         log_key = "workflowitems"
         log_before_import(log_key, expected)
 
@@ -265,7 +265,7 @@ class items:
         log_after_import(log_key, expected, self.imported_wf)
 
     def _item_import_to(self, dspace, handles, metadatas, epersons, collections):
-        expected = len(self._items) if self._items is not None else 0
+        expected = len(self._items or {})
         log_key = "items"
         log_before_import(log_key, expected)
 
@@ -346,7 +346,7 @@ class items:
             self._col_id2uuid.setdefault(item_uuid, []).append(col_uuid)
 
         to_import = [x for x in self._col_id2uuid.items() if len(
-            x[1]) > 1] if self._col_id2uuid is not None else []
+            x[1]) > 1] if self._col_id2uuid else []
         expected = len(to_import)
         log_key = "items coll"
         log_before_import(log_key, expected)
@@ -406,8 +406,8 @@ class items:
 
     def _migrate_versions(self, env, db7, db5_dspace, metadatas):
         _logger.info(
-            f"Migrating versions [{len(self._id2item) if self._id2item is not None else 0}], "
-            f"already done:[{len(self._migrated_versions) if self._migrated_versions is not None else 0}]")
+            f"Migrating versions [{len(self._id2item) if self._id2item else 0}], "
+            f"already done:[{len(self._migrated_versions) if self._migrated_versions else 0}]")
 
         admin_username = env["backend"]["user"]
         admin_uuid = db7.get_admin_uuid(admin_username)
@@ -476,7 +476,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 self._migrated_versions.append(str(item_id))
 
         _logger.info(
-            f"Migrated versions [{len(self._migrated_versions) if self._migrated_versions is not None else 0}]")
+            f"Migrated versions [{len(self._migrated_versions) if self._migrated_versions else 0}]")
 
     def raw_after_import(self, env, db7, db5_dspace, metadatas):
         # Migration process
@@ -596,7 +596,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             problematic.append(uuid7)
         if problematic:
             _logger.warning(
-                f'We have [{len(problematic) if problematic is not None else 0}] versions in v7 `versionitem` that are not expected!')
+                f'We have [{len(problematic) if problematic else 0}] versions in v7 `versionitem` that are not expected!')
             for uuid in problematic:
                 _logger.warning(f'UUID: {uuid}')
 

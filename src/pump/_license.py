@@ -58,7 +58,7 @@ class licenses:
             _logger.info(f"Empty input: [{license_defs_file_str}].")
 
     def __len__(self):
-        return len(self._labels) if self._labels is not None else 0
+        return len(self._labels or {})
 
     @property
     def imported_labels(self):
@@ -77,7 +77,7 @@ class licenses:
         """
             Mapped tables: license_label
         """
-        expected = len(self._labels) if self._labels is not None else 0
+        expected = len(self._labels or {})
         log_key = "license labels"
         log_before_import(log_key, expected)
 
@@ -124,7 +124,7 @@ class licenses:
 
     @time_method
     def _import_license_defs(self, env, dspace, epersons):
-        expected = len(self._licenses) if self._licenses is not None else 0
+        expected = len(self._licenses or {})
         log_key = "license defs"
         log_before_import(log_key, expected)
 

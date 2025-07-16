@@ -28,7 +28,7 @@ class registrationdatas:
             return
 
     def __len__(self):
-        return len(self._rd) if self._rd is not None else 0
+        return len(self._rd or {})
 
     @property
     def imported(self):

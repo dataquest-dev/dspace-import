@@ -58,7 +58,7 @@ class collections:
             self._col2group[int(m.group(1))] = meta['resource_id']
 
     def __len__(self):
-        return len(self._col) if self._col is not None else 0
+        return len(self._col or {})
 
     def uuid(self, com_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

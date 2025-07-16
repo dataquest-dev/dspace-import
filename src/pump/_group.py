@@ -149,7 +149,7 @@ class groups:
             Import data into database.
             Mapped tables: epersongroup
         """
-        expected = len(self._eperson) if self._eperson is not None else 0
+        expected = len(self._eperson or {})
         log_key = "epersongroup"
         log_before_import(log_key, expected)
 
@@ -201,7 +201,7 @@ class groups:
             Import data into database.
             Mapped tables: group2group
         """
-        expected = len(self._g2g) if self._g2g is not None else 0
+        expected = len(self._g2g or {})
         log_key = "epersons g2g (could have children)"
         log_before_import(log_key, expected)
 

@@ -29,7 +29,7 @@ class handles:
             arr.append(h)
 
     def __len__(self):
-        return len(self._handles) if self._handles is not None else 0
+        return len(self._handles or {})
 
     @property
     def imported(self):

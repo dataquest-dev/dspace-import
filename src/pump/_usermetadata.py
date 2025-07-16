@@ -44,7 +44,7 @@ class usermetadatas:
             self._umeta_transid2ums.setdefault(t_id, []).append(um)
 
     def __len__(self):
-        return len(self._umeta) if self._umeta is not None else 0
+        return len(self._umeta or {})
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
@@ -57,7 +57,7 @@ class usermetadatas:
     @time_method
     def import_to(self, dspace, bitstreams, userregistrations):
         expected = len(
-            self._umeta_transid2ums) if self._umeta_transid2ums is not None else 0
+            self._umeta_transid2ums or {})
         log_key = "usermetadata"
         log_before_import(log_key, expected)
 

@@ -66,7 +66,7 @@ class epersons:
                 self._email2id[email] = e['eperson_id']
 
     def __len__(self):
-        return len(self._epersons or [])
+        return len(self._epersons or {})
 
     def by_email(self, email: str):
         return self._email2id.get(email, None)
@@ -165,7 +165,7 @@ class groups:
             return
 
     def __len__(self):
-        return len(self._groups) if self._groups is not None else 0
+        return len(self._groups or {})
 
     @property
     def imported(self):

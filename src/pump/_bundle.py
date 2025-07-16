@@ -38,7 +38,7 @@ class bundles:
                 self._primary[primary_id] = b['bundle_id']
 
     def __len__(self):
-        return len(self._bundles) if self._bundles is not None else 0
+        return len(self._bundles or {})
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

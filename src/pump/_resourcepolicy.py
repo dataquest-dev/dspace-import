@@ -47,7 +47,7 @@ class resourcepolicies:
     DEFAULT_BITSTREAM_READ = "DEFAULT_BITSTREAM_READ"
 
     def __len__(self):
-        return len(self._respol) if self._respol is not None else 0
+        return len(self._respol or {})
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
@@ -89,8 +89,9 @@ class resourcepolicies:
             actionId = res_policy['action_id']
 
             # control, if action is entered correctly
-            if dspace_actions is None:
-                _logger.error("dspace_actions is None. Cannot validate actionId.")
+            if not dspace_actions:
+                _logger.error(
+                    "dspace_actions is None or empty. Cannot validate actionId.")
                 failed += 1
                 continue
             if actionId < 0 or actionId >= len(dspace_actions):

@@ -34,7 +34,7 @@ class communities:
         self._groups = {}
 
     def __len__(self):
-        return len(self._com or [])
+        return len(self._com or {})
 
     @property
     def logos(self):

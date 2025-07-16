@@ -58,7 +58,7 @@ class bitstreams:
         self._done = []
 
     def __len__(self):
-        return len(self._bs) if self._bs is not None else 0
+        return len(self._bs or {})
 
     def uuid(self, b_id: int):
         return self._id2uuid.get(str(b_id), None)
@@ -103,7 +103,7 @@ class bitstreams:
             _logger.info("There are no logos for collections.")
             return
 
-        expected = len(collections.logos.items()) if collections.logos is not None else 0
+        expected = len(collections.logos.items()) if collections.logos else 0
         log_key = "collection logos"
         log_before_import(log_key, expected)
 
@@ -134,7 +134,7 @@ class bitstreams:
             _logger.info("There are no logos for communities.")
             return
 
-        expected = len(communities.logos.items()) if communities.logos is not None else 0
+        expected = len(communities.logos.items()) if communities.logos else 0
         log_key = "communities logos"
         log_before_import(log_key, expected)
 
