@@ -130,7 +130,7 @@ class metadatas:
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                178 |                  3 |  bitstream  | redirectToURL |    Get the bitstream from this URL.
     IGNORE_FIELDS = [
-        176, 178
+        174, 177
     ]
 
     # fields which will be replaced in metadata
@@ -138,7 +138,7 @@ class metadatas:
     #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
     # -------------------+--------------------+-------------+---------------+----------------------------------------
     #                98  |                  3 | hasMetadata |     null      |       Indicates uploaded cmdi file
-    REPLACE_FIELDS = [98]
+    REPLACE_FIELDS = [160]
 
     validate_table = [
         ["metadataschemaregistry", {
@@ -257,25 +257,25 @@ class metadatas:
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.replaces')
-        assert 50 == from_map
+        assert 52 == from_map
         return from_map
 
     @property
     def V5_DC_RELATION_ISREPLACEDBY_ID(self):
         from_map = self.get_field_id_by_name_v5('relation.isreplacedby')
-        assert 51 == from_map
+        assert 53 == from_map
         return from_map
 
     @property
     def V5_DC_IDENTIFIER_URI_ID(self):
         from_map = self.get_field_id_by_name_v5('identifier.uri')
-        assert 25 == from_map
+        assert 27 == from_map
         return from_map
 
     @property
     def V5_DATE_ISSUED(self):
         from_map = self.get_field_id_by_name_v5('date.issued')
-        assert 15 == from_map
+        assert 17 == from_map
         return from_map
 
     @property
