@@ -103,7 +103,7 @@ class bitstreams:
             _logger.info("There are no logos for collections.")
             return
 
-        expected = len(collections.logos.items()) if collections.logos else 0
+        expected = len((collections.logos or {}).items())
         log_key = "collection logos"
         log_before_import(log_key, expected)
 
@@ -134,7 +134,7 @@ class bitstreams:
             _logger.info("There are no logos for communities.")
             return
 
-        expected = len(communities.logos.items()) if communities.logos else 0
+        expected = len((communities.logos or {}).items())
         log_key = "communities logos"
         log_before_import(log_key, expected)
 

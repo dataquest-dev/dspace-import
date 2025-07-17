@@ -94,7 +94,7 @@ class resourcepolicies:
                     "dspace_actions is None or empty. Cannot validate actionId.")
                 failed += 1
                 continue
-            if actionId or actionId < 0 or actionId >= len(dspace_actions):
+            if actionId is None or actionId < 0 or actionId >= len(dspace_actions):
                 _logger.error(
                     f"Invalid actionId: {actionId}. Must be in range 0 to {len(dspace_actions) - 1}")
                 failed += 1

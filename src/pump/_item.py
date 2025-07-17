@@ -345,7 +345,7 @@ class items:
             col_uuid = collections.uuid(col['collection_id'])
             self._col_id2uuid.setdefault(item_uuid, []).append(col_uuid)
 
-        to_import = [x for x in (self._col_id2uuid or {}).items()]
+        to_import = [x for x in (self._col_id2uuid or {}).items() if len(x[1]) > 1]
         expected = len(to_import)
         log_key = "items coll"
         log_before_import(log_key, expected)
