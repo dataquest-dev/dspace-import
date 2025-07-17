@@ -55,7 +55,7 @@ class epersons:
         self._email2id = {}
         self._id2uuid = {}
 
-        if len(self._epersons) == 0:
+        if not self._epersons:
             _logger.info(f"Empty input: [{eperson_file_str}].")
             return
 
@@ -66,7 +66,7 @@ class epersons:
                 self._email2id[email] = e['eperson_id']
 
     def __len__(self):
-        return len(self._epersons)
+        return len(self._epersons or {})
 
     def by_email(self, email: str):
         return self._email2id.get(email, None)
@@ -161,12 +161,12 @@ class groups:
 
         self._id2uuid = {}
 
-        if len(self._groups) == 0:
+        if not self._groups:
             _logger.info(f"Empty input: [{egroups_file_str}].")
             return
 
     def __len__(self):
-        return len(self._groups)
+        return len(self._groups or {})
 
     @property
     def imported(self):

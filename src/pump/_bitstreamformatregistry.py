@@ -40,7 +40,7 @@ class bitstreamformatregistry:
             return
 
     def __len__(self):
-        return len(self._reg)
+        return len(self._reg or {})
 
     def uuid(self, f_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

@@ -74,7 +74,8 @@ class db:
 
     def exe_sql(self, sql_text: str):
         with self._conn as cursor:
-            sql_lines = [x.strip() for x in sql_text.splitlines() if len(x.strip()) > 0]
+            sql_lines = [x.strip()
+                         for x in (sql_text or "").splitlines() if x.strip()]
             for sql in sql_lines:
                 cursor.execute(sql)
             return
@@ -184,7 +185,12 @@ class tester:
 
     @staticmethod
     def get_list_val(part: list, pos: int):
-        return part[pos] if len(part) > pos else None
+        if part is not None:
+            if pos < 0:
+                return None
+            if 0 <= pos < len(part):
+                return part[pos]
+        return None
 
     @staticmethod
     def log_error(msg: str, test_n: str, part_type: str = None) -> list:
@@ -314,9 +320,9 @@ class differ:
         too_many_5 = ""
         too_many_7 = ""
         LIMIT = 5
-        if len(only_in_5) > LIMIT:
+        if len(only_in_5 or []) > LIMIT:
             too_many_5 = f"!!! TOO MANY [{len(only_in_5)}] "
-        if len(only_in_7) > LIMIT:
+        if len(only_in_7 or []) > LIMIT:
             too_many_7 = f"!!! TOO MANY [{len(only_in_7)}] "
 
         do_not_show = do_not_show or "CI" in os.environ or "GITHUB_ACTION" in os.environ
@@ -325,9 +331,12 @@ class differ:
             only_in_5 = [x if "@" not in x else "....." for x in only_in_5]
             only_in_7 = [x if "@" not in x else "....." for x in only_in_7]
 
-        _logger.info(f"Table [{table_name}]: v5:[{len(vals5)}], v7:[{len(vals7)}]\n"
-                     f"  {too_many_5}only in v5:[{only_in_5[:LIMIT]}]\n"
-                     f"  {too_many_7}only in v7:[{only_in_7[:LIMIT]}]")
+        _logger.info(
+            f"Table [{table_name}]: v5:[{len(vals5 or [])}], "
+            f"v7:[{len(vals7 or [])}]\n"
+            f"  {too_many_5 or ''}only in v5:[{(only_in_5[:LIMIT] if only_in_5 else [])}]\n"
+            f"  {too_many_7 or ''}only in v7:[{(only_in_7[:LIMIT] if only_in_7 else [])}]"
+        )
 
     def diff_table_cmp_cols(self, db5, table_name: str, compare_arr: list, gdpr: bool = True):
         cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name)
@@ -340,7 +349,7 @@ class differ:
 
         only_in_5 = list(set(vals5_cmp).difference(vals7_cmp))
         only_in_7 = list(set(vals7_cmp).difference(vals5_cmp))
-        if len(only_in_5) + len(only_in_7) == 0:
+        if not (only_in_5 or only_in_7):
             _logger.info(f"Table [{table_name: >20}] is THE SAME in v5 and v7!")
             return
         self._cmp_values(table_name, vals5, only_in_5, vals7, only_in_7, do_not_show)
@@ -351,19 +360,22 @@ class differ:
         cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name)
         do_not_show = gdpr and "email" in nonnull
 
-        if len(vals5) != len(vals7) and sql is not None:
+        len_vals5 = len(vals5 or [])
+        len_vals7 = len(vals7 or [])
+
+        if len_vals5 != len_vals7 and sql:
             cols5, vals5, cols7, vals7 = self._fetch_all_vals(db5, table_name, sql)
             sql_info = True
 
-        msg = " OK " if len(vals5) == len(vals7) else " !!! WARN !!! "
+        msg = " OK " if len_vals5 == len_vals7 else " !!! WARN !!! "
         _logger.info(
-            f"Table [{table_name: >20}] {msg} compared by len only v5:[{len(vals5)}], v7:[{len(vals7)}]")
+            f"Table [{table_name: >20}] {msg} compared by len only v5:[{len_vals5}], v7:[{len_vals7}]")
 
         for col_name in nonnull:
-            vals5_cmp = [x for x in self._filter_vals(
-                vals5, cols5, [col_name]) if x[0] is not None]
-            vals7_cmp = [x for x in self._filter_vals(
-                vals7, cols7, [col_name]) if x[0] is not None]
+            vals5_cmp = [x for x in self._filter_vals(vals5 or [], cols5 or [],
+                                                      [col_name]) if x[0] is not None]
+            vals7_cmp = [x for x in self._filter_vals(vals7 or [], cols7 or [],
+                                                      [col_name]) if x[0] is not None]
 
             msg = " OK " if len(vals5_cmp) == len(vals7_cmp) else " !!! WARN !!! "
             _logger.info(
@@ -418,7 +430,7 @@ class differ:
                     self.diff_table_cmp_len(db5, table_name, cmp)
 
                 # compare only len
-                if len(defin) == 0:
+                if not defin:
                     self.diff_table_cmp_len(db5, table_name)
 
                 cmp = defin.get("len", None)

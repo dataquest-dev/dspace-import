@@ -37,7 +37,7 @@ class resourcepolicies:
 
     def __init__(self, resourcepolicy_file_str: str):
         self._respol = read_json(resourcepolicy_file_str)
-        if len(self._respol) == 0:
+        if not self._respol:
             _logger.info(f"Empty input: [{resourcepolicy_file_str}].")
         self._id2uuid = {}
         self._imported = {
@@ -47,7 +47,7 @@ class resourcepolicies:
     DEFAULT_BITSTREAM_READ = "DEFAULT_BITSTREAM_READ"
 
     def __len__(self):
-        return len(self._respol)
+        return len(self._respol or {})
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
@@ -89,8 +89,14 @@ class resourcepolicies:
             actionId = res_policy['action_id']
 
             # control, if action is entered correctly
-            if actionId < 0 or actionId >= len(dspace_actions):
-                _logger.error(f"action_id [{actionId}] is out of range.")
+            if not dspace_actions:
+                _logger.error(
+                    "dspace_actions is None or empty. Cannot validate actionId.")
+                failed += 1
+                continue
+            if actionId is None or actionId < 0 or actionId >= len(dspace_actions):
+                _logger.error(
+                    f"Invalid actionId: {actionId}. Must be in range 0 to {len(dspace_actions) - 1}")
                 failed += 1
                 continue
 
@@ -121,7 +127,7 @@ class resourcepolicies:
             if eg_id is not None:
                 # groups created with coll and comm are already in the group
                 group_list = repo.groups.uuid(eg_id)
-                if len(group_list) == 0:
+                if not group_list:
                     continue
                 if len(group_list) > 1:
                     if len(group_list) != 2:
