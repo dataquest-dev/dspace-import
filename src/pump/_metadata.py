@@ -153,25 +153,28 @@ class metadatas:
         self._values = {}
 
         self._field_v7 = read_json(field_file_v7_str)
-        self._schema_v7 = read_json(schema_file_v7_str)
-        self._schema_id2short_id_v7 = {}
-        for f in self._schema_v7:
-            self._schema_id2short_id_v7[f['metadata_schema_id']] = f['short_id']
+        self._schemas_v7 = read_json(schema_file_v7_str)
+        self._schemas_id2short_id_v7 = {}
+        for f in self._schemas_v7:
+            self._schemas_id2short_id_v7[f['metadata_schema_id']] = f['short_id']
         self._field_v7_existed = {}
         for f in self._field_v7:
             self._field_v7_existed[
-                f"{self._schema_id2short_id_v7[f['metadata_schema_id']]}.{f['element']}.{f['qualifier']}"] =\
+                f"{self._schemas_id2short_id_v7[f['metadata_schema_id']]}.{f['element']}.{f['qualifier']}"] =\
                 f['metadata_field_id']
 
         self._fields_v5 = read_json(field_file_v5_str)
+        self._schemas_v5 = read_json(schema_file_v5_str)
+        self._schema_id2short_id_v5 = {}
+        for f in self._schemas_v5:
+            self._schema_id2short_id_v5[f['metadata_schema_id']] = f['short_id']
         self._fields_id2v7id = {}
         self._fields_id2js_v5 = {x['metadata_field_id']: x for x in self._fields_v5}
         self._v5_fields_name2id = {}
-        self._v7_fields_name2id = {}
         for f in self._fields_v5:
-            self._v5_fields_name2id[f"{f['element']}.{f['qualifier']}"] = f['metadata_field_id']
-
-        self._schemas_v5 = read_json(schema_file_v5_str)
+            self._v5_fields_name2id[(f"{self._schema_id2short_id_v5[f['metadata_schema_id']]}"
+                                     f".{f['element']}.{f['qualifier']}")] = f['metadata_field_id']
+        self._v7_fields_name2id = {}
         self._schemas_id2id_v5 = {}
         self._schemas_id2js_v5 = {x['metadata_schema_id']: x for x in self._schemas_v5}
 
@@ -187,11 +190,15 @@ class metadatas:
         }
 
         # clarin-dspace
-        self._ignored_fields = env["ignore"]["fields"]
+        self._ignored_fields = [
+            self.get_field_id_by_name_v5(name) for name in env["ignore"]["fields"]
+        ]
 
         # dspace
         # fields which will be replaced in metadata
-        self._replaced_fields = env["replace"]["fields"]
+        self._replaced_fields = [
+            self.get_field_id_by_name_v5(name) for name in env["replaced"]["fields"]
+        ]
 
         # Find out which field is `local.sponsor`, check only `sponsor` string
         sponsor_field_id = -1
@@ -245,6 +252,22 @@ class metadatas:
 
     # =====
 
+    def prepare_field_name(self, name: str) -> str | None:
+        """
+        Prepares the field name for lookup in v5 or v7 dictionaries.
+
+        Rules:
+        - If name contains more than one dot ('.'), return None (invalid).
+        - If name contains exactly one dot, append '.None' suffix.
+        - If name contains no dot, return None (invalid).
+        """
+        dot_count = name.count('.')
+        if dot_count > 2 or dot_count < 1:
+            return None
+        if dot_count == 1:
+            return name + ".None"
+        return name
+
     def get_field_id_by_name_v5(self, name: str):
         """
             Note:
@@ -252,37 +275,39 @@ class metadatas:
 
             select * from metadatafieldregistry where metadata_field_id=XXX ;
         """
-        return self._v5_fields_name2id.get(name, None)
+        prepared_name = self.prepare_field_name(name)
+        return self._v5_fields_name2id.get(prepared_name, None)
 
     def get_existed_field_by_name_v7(self, name: str):
-        return self._field_v7_existed.get(name, None)
+        prepared_name = self.prepare_field_name(name)
+        return self._field_v7_existed.get(prepared_name, None)
 
     @property
     def V5_DC_RELATION_REPLACES_ID(self):
-        from_map = self.get_field_id_by_name_v5('relation.replaces')
+        from_map = self.get_field_id_by_name_v5('dc.relation.replaces')
         if from_map is None:
-            raise ValueError("Field ID for 'relation.replaces' in v5 not found.")
+            raise ValueError("Field ID for 'dc.relation.replaces' in v5 not found.")
         return from_map
 
     @property
     def V5_DC_RELATION_ISREPLACEDBY_ID(self):
-        from_map = self.get_field_id_by_name_v5('relation.isreplacedby')
+        from_map = self.get_field_id_by_name_v5('dc.relation.isreplacedby')
         if from_map is None:
-            raise ValueError("Field ID for 'relation.isreplacedby' in v5 not found.")
+            raise ValueError("Field ID for 'dc.relation.isreplacedby' in v5 not found.")
         return from_map
 
     @property
     def V5_DC_IDENTIFIER_URI_ID(self):
-        from_map = self.get_field_id_by_name_v5('identifier.uri')
+        from_map = self.get_field_id_by_name_v5('dc.identifier.uri')
         if from_map is None:
-            raise ValueError("Field ID for 'identifier.uri' in v5 not found.")
+            raise ValueError("Field ID for 'dc.identifier.uri' in v5 not found.")
         return from_map
 
     @property
     def V5_DATE_ISSUED(self):
-        from_map = self.get_field_id_by_name_v5('date.issued')
+        from_map = self.get_field_id_by_name_v5('dc.date.issued')
         if from_map is None:
-            raise ValueError("Field ID for 'date.issued' in v5 not found.")
+            raise ValueError("Field ID for 'dc.date.issued' in v5 not found.")
         return from_map
 
     @property
@@ -315,9 +340,9 @@ class metadatas:
 
     @property
     def V7_FIELD_ID_TITLE(self):
-        from_map = self.get_existed_field_by_name_v7('dc.title.None')
+        from_map = self.get_existed_field_by_name_v7('dc.title')
         if from_map is None:
-            raise ValueError("Field ID for 'dc.title.None' in v7 not found.")
+            raise ValueError("Field ID for 'dc.title' in v7 not found.")
         return from_map
 
     @property

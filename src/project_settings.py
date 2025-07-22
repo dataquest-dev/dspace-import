@@ -29,16 +29,16 @@ settings = {
         # clarin-dspace=# select * from metadatafieldregistry  where metadata_field_id=178 ;
         # -------------------+--------------------+-------------+---------------+----------------------------------------
         #                178 |                  3 |  bitstream  | redirectToURL |    Get the bitstream from this URL.
-        "fields": [176, 178]
+        "fields": ['local.bitstream.file', 'local.bitstream.redirectToURL'],
     },
 
-    "replace": {
+    "replaced": {
         # fields which will be replaced in metadata
         # if we want to ignore the metadata field, we must replace field when metadata is imported!
         #  metadata_field_id | metadata_schema_id |   element   |   qualifier   |               scope_note
         # -------------------+--------------------+-------------+---------------+----------------------------------------
         #                98  |                  3 | hasMetadata |     null      |       Indicates uploaded cmdi file
-        "fields": [98]
+        "fields": ['local.hasMetadata'],
     },
 
     "db_dspace_7": {

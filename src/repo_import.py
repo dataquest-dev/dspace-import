@@ -57,7 +57,7 @@ if __name__ == "__main__":
                         required=False, type=str, default="")
     parser.add_argument('--tempdb',
                         help='Tempdbesport exists',
-                        required=False, action="store_true", default=False)
+                        required=False, action="store_true", default=True)
 
     args = parser.parse_args()
     s = time.time()
