@@ -257,9 +257,10 @@ class metadatas:
         Prepares the field name for lookup in v5 or v7 dictionaries.
 
         Rules:
-        - If name contains more than one dot ('.'), return None (invalid).
+        - If name contains more than two dots ('.'), return None (invalid).
+        - If name contains less than one dot, return None (invalid).
         - If name contains exactly one dot, append '.None' suffix.
-        - If name contains no dot, return None (invalid).
+        - Otherwise, return name as is.
         """
         dot_count = name.count('.')
         if dot_count > 2 or dot_count < 1:
