@@ -48,7 +48,7 @@ class bitstreams:
             "col_logo": 0,
         }
 
-        if len(self._bs) == 0:
+        if not self._bs:
             _logger.info(f"Empty input: [{bitstream_file_str}].")
             return
 
@@ -58,7 +58,7 @@ class bitstreams:
         self._done = []
 
     def __len__(self):
-        return len(self._bs)
+        return len(self._bs or {})
 
     def uuid(self, b_id: int):
         return self._id2uuid.get(str(b_id), None)
@@ -103,7 +103,7 @@ class bitstreams:
             _logger.info("There are no logos for collections.")
             return
 
-        expected = len(collections.logos.items())
+        expected = len((collections.logos or {}).items())
         log_key = "collection logos"
         log_before_import(log_key, expected)
 
@@ -134,7 +134,7 @@ class bitstreams:
             _logger.info("There are no logos for communities.")
             return
 
-        expected = len(communities.logos.items())
+        expected = len((communities.logos or {}).items())
         log_key = "communities logos"
         log_before_import(log_key, expected)
 

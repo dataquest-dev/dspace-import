@@ -23,7 +23,7 @@ class bundles:
         }
         self._id2uuid = {}
 
-        if len(self._bundles) == 0:
+        if not self._bundles:
             _logger.info(f"Empty input: [{bundle_file_str}].")
             return
 
@@ -38,7 +38,7 @@ class bundles:
                 self._primary[primary_id] = b['bundle_id']
 
     def __len__(self):
-        return len(self._bundles)
+        return len(self._bundles or {})
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)

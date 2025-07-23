@@ -34,7 +34,7 @@ class communities:
         self._groups = {}
 
     def __len__(self):
-        return len(self._com)
+        return len(self._com or {})
 
     @property
     def logos(self):
@@ -84,13 +84,13 @@ class communities:
 
         coms = self._com.copy()
 
-        iter = 0
+        counter = 0
 
         i = 0
-        while len(coms) > 0:
-            iter += 1
+        while coms:
+            counter += 1
 
-            if iter > 200:
+            if counter > 200:
                 _logger.critical(
                     "Very likely in the process of infinite loop because importing to existing db.")
                 break

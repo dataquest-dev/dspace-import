@@ -29,7 +29,7 @@ class handles:
             arr.append(h)
 
     def __len__(self):
-        return len(self._handles)
+        return len(self._handles or {})
 
     @property
     def imported(self):
@@ -60,7 +60,7 @@ class handles:
     @time_method
     def import_to(self, dspace):
         # external
-        arr = self.get_handles_by_type(None, None)
+        arr = self.get_handles_by_type(None, None) or []
         expected = len(arr)
         log_key = "external handles"
         log_before_import(log_key, expected)
@@ -69,7 +69,7 @@ class handles:
         self._imported += cnt
 
         # no object
-        arr = self.get_handles_by_type(items.TYPE, None)
+        arr = self.get_handles_by_type(items.TYPE, None) or []
         expected = len(arr)
         log_key = "handles"
         log_before_import(log_key, expected)
@@ -83,7 +83,7 @@ class handles:
         """
             Get handle based on object type and its id.
         """
-        arr = self.get_handles_by_type(type_id, obj_id)
+        arr = self.get_handles_by_type(type_id, obj_id) or []
         if len(arr) == 0:
             return None
         return arr[0]['handle']

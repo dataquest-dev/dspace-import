@@ -50,15 +50,15 @@ class licenses:
             "licenses": 0,
         }
 
-        if len(self._labels) == 0:
+        if not self._labels:
             _logger.info(f"Empty input: [{license_labels_file_str}].")
-        if len(self._map) == 0:
+        if not self._map:
             _logger.info(f"Empty input: [{license_map_file_str}].")
-        if len(self._licenses) == 0:
+        if not self._licenses:
             _logger.info(f"Empty input: [{license_defs_file_str}].")
 
     def __len__(self):
-        return len(self._labels)
+        return len(self._labels or {})
 
     @property
     def imported_labels(self):
@@ -77,7 +77,7 @@ class licenses:
         """
             Mapped tables: license_label
         """
-        expected = len(self._labels)
+        expected = len(self._labels or {})
         log_key = "license labels"
         log_before_import(log_key, expected)
 
@@ -113,17 +113,18 @@ class licenses:
             except Exception as e:
                 _logger.error(f'put_license_label: [{l_id}] failed [{str(e)}]')
 
-        for m in self._map:
-            lic_id = m['license_id']
-            lab_id = m['label_id']
-            self._license2label.setdefault(str(lic_id), []).append(
-                self._created_labels[str(lab_id)])
+        if self._map:
+            for m in self._map:
+                lic_id = m['license_id']
+                lab_id = m['label_id']
+                self._license2label.setdefault(str(lic_id), []).append(
+                    self._created_labels[str(lab_id)])
 
         log_after_import(log_key, expected, self.imported_labels)
 
     @time_method
     def _import_license_defs(self, env, dspace, epersons):
-        expected = len(self._licenses)
+        expected = len(self._licenses or {})
         log_key = "license defs"
         log_before_import(log_key, expected)
 
