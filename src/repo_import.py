@@ -56,7 +56,7 @@ if __name__ == "__main__":
                         help='Location of assetstore folder',
                         required=False, type=str, default="")
     parser.add_argument('--tempdb',
-                        help='Tempdbesport exists',
+                        help='Tempdb export exists',
                         required=False, action="store_true", default=False)
 
     args = parser.parse_args()
