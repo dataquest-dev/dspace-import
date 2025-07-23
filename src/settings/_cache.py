@@ -17,8 +17,6 @@ settings = {
     "license": "license.json",
     "item": "item.json",
 
-    "tasklistitem": "tasklistitem.json",
-
     "bundle": "bundle.json",
     "bitstream": "bitstream.json",
 
