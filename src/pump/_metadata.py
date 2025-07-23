@@ -262,12 +262,12 @@ class metadatas:
         - If name contains exactly one dot, append '.None' suffix.
         - Otherwise, return name as is.
         """
-        dot_count = name.count('.')
-        if dot_count > 2 or dot_count < 1:
-            return None
-        if dot_count == 1:
-            return name + ".None"
-        return name
+        dots = name.count('.')
+        if dots == 1:
+            return f"{name}.None"
+        if dots == 2:
+            return name
+        return None
 
     def get_field_id_by_name_v5(self, name: str):
         """
