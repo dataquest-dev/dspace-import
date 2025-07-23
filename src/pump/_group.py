@@ -85,10 +85,10 @@ class groups:
         # all imported group
         self._id2uuid = {}
 
-        if len(self._eperson) == 0:
+        if not self._eperson:
             _logger.info(f"Empty input collections: [{eperson_file_str}].")
 
-        if len(self._g2g) == 0:
+        if not self._g2g:
             _logger.info(f"Empty input collections: [{g2g_file_str}].")
 
     @property
@@ -149,7 +149,7 @@ class groups:
             Import data into database.
             Mapped tables: epersongroup
         """
-        expected = len(self._eperson)
+        expected = len(self._eperson or {})
         log_key = "epersongroup"
         log_before_import(log_key, expected)
 
@@ -201,7 +201,7 @@ class groups:
             Import data into database.
             Mapped tables: group2group
         """
-        expected = len(self._g2g)
+        expected = len(self._g2g or {})
         log_key = "epersons g2g (could have children)"
         log_before_import(log_key, expected)
 

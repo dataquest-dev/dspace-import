@@ -20,12 +20,12 @@ class userregistrations:
 
         self._id2uuid = {}
 
-        if len(self._ur) == 0:
+        if not self._ur:
             _logger.info(f"Empty input: [{ur_file_str}].")
             return
 
     def __len__(self):
-        return len(self._ur)
+        return len(self._ur or {})
 
     def uuid(self, e_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
