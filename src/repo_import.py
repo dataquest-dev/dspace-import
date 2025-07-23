@@ -240,16 +240,6 @@ if __name__ == "__main__":
     repo.test(repo.items)
     _logger.info(import_sep)
 
-    # import tasklists
-    cache_file = env["cache"]["tasklistitem"]
-    if deserialize(args.resume, repo.tasklistitems, cache_file):
-        _logger.info(f"Resuming tasklistitems [{repo.tasklistitems.imported}]")
-    else:
-        repo.tasklistitems.import_to(dspace_be, repo.epersons, repo.items)
-        repo.tasklistitems.serialize(cache_file)
-    repo.diff(repo.tasklistitems)
-    _logger.info(import_sep)
-
     # import bundle
     cache_file = env["cache"]["bundle"]
     if deserialize(args.resume, repo.bundles, cache_file):

@@ -18,7 +18,6 @@ from ._userregistration import userregistrations
 from ._bitstreamformatregistry import bitstreamformatregistry
 from ._license import licenses
 from ._item import items
-from ._tasklistitem import tasklistitems
 from ._bundle import bundles
 from ._bitstream import bitstreams
 from ._resourcepolicy import resourcepolicies
@@ -138,10 +137,6 @@ class repo:
             _f("workspaceitem"),
             _f("workflowitem"),
             _f("collection2item"),
-        )
-
-        self.tasklistitems = tasklistitems(
-            _f("tasklistitem")
         )
 
         self.bundles = bundles(
