@@ -1,5 +1,7 @@
 import logging
 import re
+from typing import Optional
+
 from ._utils import read_json, time_method, serialize, deserialize, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.metadata")
@@ -252,7 +254,7 @@ class metadatas:
 
     # =====
 
-    def prepare_field_name(self, name: str) -> str | None:
+    def prepare_field_name(self, name: str) -> Optional[str]:
         """
         Prepares the field name for lookup in v5 or v7 dictionaries.
 
