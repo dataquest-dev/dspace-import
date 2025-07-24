@@ -254,7 +254,7 @@ class metadatas:
 
     # =====
 
-    def prepare_field_name(self, name: str) -> str | Optional[str]:
+    def prepare_field_name(self, name: str) -> Optional[str]:
         """
         Prepares the field name for lookup in v5 or v7 dictionaries.
 
