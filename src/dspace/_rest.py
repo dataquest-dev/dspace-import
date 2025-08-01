@@ -276,13 +276,6 @@ class rest:
 
     # =======
 
-    def put_tasklistitem(self, param: dict):
-        url = 'clarin/eperson/groups/tasklistitem'
-        _logger.debug(f"Importing [][{param}] using [{url}]")
-        return list(self._iput(url, [{}], [param]))[0]
-
-    # =======
-
     def put_bundle(self, item_uuid: int, data: dict):
         url = f'core/items/{item_uuid}/bundles'
         _logger.debug(f"Importing [{data}] using [{url}]")
