@@ -11,9 +11,9 @@ class usermetadatas:
     """
 
     def __init__(self, usermetadata_file_str: str, userallowance_file_str: str, resourcemapping_file_str: str):
-        self._umeta = read_json(usermetadata_file_str)
-        self._uallowance = read_json(userallowance_file_str)
-        self._rmap = read_json(resourcemapping_file_str)
+        self._umeta = read_json(usermetadata_file_str) or {}
+        self._uallowance = read_json(userallowance_file_str) or {}
+        self._rmap = read_json(resourcemapping_file_str) or {}
         self._id2uuid = {}
         self._imported = {
             "um": 0,
@@ -30,8 +30,7 @@ class usermetadatas:
 
         # mapping transaction_id to mapping_id
         self._uallowance_transid2d = {
-            ua['transaction_id']: ua
-            for ua in (self._uallowance or [])
+            ua['transaction_id']: ua for ua in self._uallowance
         }
         # mapping bitstream_id to mapping_id
         self._rmap_id2bsid = {m["mapping_id"]: m["bitstream_id"] for m in self._rmap}
@@ -51,11 +50,11 @@ class usermetadatas:
 
     def uuid(self, b_id: int):
         assert isinstance(list(self._id2uuid.keys() or [""])[0], str)
-        return self._id2uuid[str(b_id)]
+        return self._id2uuid.get(str(b_id))
 
     @property
     def imported(self):
-        return self._imported['um']
+        return self._imported.get('um', 0)
 
     @time_method
     def import_to(self, dspace, bitstreams, userregistrations):
@@ -68,8 +67,12 @@ class usermetadatas:
         for t_id, um_arr in progress_bar(self._umeta_transid2ums.items()):
             um0 = um_arr[0]
             # Get user_registration data for importing
-            ua_d = self._uallowance_transid2d[um0['transaction_id']]
-            # Get `eperson_id` for importing
+            ua_d = self._uallowance_transid2d.get(um0['transaction_id'])
+            if ua_d is None:
+                _logger.warning(
+                    f"No user allowance found for transaction_id {um0['transaction_id']}")
+                continue
+
             eperson_id = um0['eperson_id']
             map_id = ua_d['mapping_id']
 
@@ -79,7 +82,11 @@ class usermetadatas:
                      } for um in um_arr]
 
             try:
-                bs_id = self._rmap_id2bsid[map_id]
+                bs_id = self._rmap_id2bsid.get(map_id)
+                if bs_id is None:
+                    _logger.warning(f"No mapping found for mapping_id {map_id}")
+                    continue
+
                 bs_uuid = bitstreams.uuid(bs_id)
                 if bs_uuid is None:
                     _logger.info(
@@ -90,8 +97,8 @@ class usermetadatas:
                 # Prepare params for the import endpoint
                 params = {
                     'bitstreamUUID': bs_uuid,
-                    'createdOn': ua_d['created_on'],
-                    'token': ua_d['token'],
+                    'createdOn': ua_d.get('created_on'),
+                    'token': ua_d.get('token'),
                     'userRegistrationId': userreg_id
                 }
                 resp = dspace.put_usermetadata(params, data)
@@ -105,18 +112,18 @@ class usermetadatas:
 
     def serialize(self, file_str: str):
         data = {
-            "umeta": self._umeta,
-            "uallowance": self._uallowance,
-            "rmap": self._rmap,
-            "id2uuid": self._id2uuid,
-            "imported": self._imported,
+            "umeta": self._umeta or {},
+            "uallowance": self._uallowance or {},
+            "rmap": self._rmap or {},
+            "id2uuid": self._id2uuid or {},
+            "imported": self._imported or {"um": 0},
         }
         serialize(file_str, data)
 
     def deserialize(self, file_str: str):
-        data = deserialize(file_str)
-        self._umeta = data["umeta"]
-        self._uallowance = data["uallowance"]
-        self._rmap = data["rmap"]
-        self._id2uuid = data["id2uuid"]
-        self._imported = data["imported"]
+        data = deserialize(file_str) or {}
+        self._umeta = data.get("umeta") or {}
+        self._uallowance = data.get("uallowance") or {}
+        self._rmap = data.get("rmap") or {}
+        self._id2uuid = data.get("id2uuid") or {}
+        self._imported = data.get("imported") or {"um": 0}
