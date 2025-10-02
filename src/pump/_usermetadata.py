@@ -29,7 +29,10 @@ class usermetadatas:
             _logger.info(f"Empty input: [{resourcemapping_file_str}].")
 
         # mapping transaction_id to mapping_id
-        self._uallowance_transid2d = {ua['transaction_id']: ua for ua in self._uallowance}
+        self._uallowance_transid2d = {
+            ua['transaction_id']: ua
+            for ua in (self._uallowance or [])
+        }
         # mapping bitstream_id to mapping_id
         self._rmap_id2bsid = {m["mapping_id"]: m["bitstream_id"] for m in self._rmap}
 
