@@ -36,7 +36,6 @@ class communities:
             _logger.info(f"Empty input: [{com_file_str}].")
         if not self._com2com:
             _logger.info(f"Empty input: [{com2com_file_str}].")
-        
 
     def __len__(self):
         return len(self._com or {})

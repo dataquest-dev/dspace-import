@@ -37,7 +37,6 @@ class bitstreamformatregistry:
 
         if not self._fe:
             _logger.info(f"Empty input: [{fe_file_str}].")
-        
         if len(self) == 0:
             _logger.info(f"Empty input: [{bfr_file_str}].")
             return

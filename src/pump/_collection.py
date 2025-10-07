@@ -43,7 +43,7 @@ class collections:
         if not self._col:
             _logger.info(f"Empty input: [{col_file_str}].")
 
-        if not self._com2col or self._col:
+        if not self._com2col or not self._col:
             return
 
         # because the role DEFAULT_READ is without old group id in collection
