@@ -56,7 +56,11 @@ class repo:
                 if its name is in env["test"], load configured test JSON file for testing instead.
             """
             if table_name in env.get("test", []):
-                return os.path.join(env["input"]["test"], env["input"]["test_json_filename"])
+                test_json_path = os.path.join(
+                    env["input"]["test"], env["input"]["test_json_filename"])
+                if not os.path.exists(test_json_path):
+                    raise FileNotFoundError(f"Test JSON file not found: {test_json_path}")
+                return test_json_path
             os.makedirs(env["input"]["tempdbexport_v5"], exist_ok=True)
             out_f = os.path.join(env["input"]["tempdbexport_v5"], f"{table_name}.json")
             if not env["tempdb"]:
