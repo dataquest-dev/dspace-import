@@ -16,8 +16,8 @@ class bundles:
     ]
 
     def __init__(self, bundle_file_str: str, item2bundle_file_str: str):
-        self._bundles = read_json(bundle_file_str) or {}
-        self._item2bundle = read_json(item2bundle_file_str) or {}
+        self._bundles = read_json(bundle_file_str) or []
+        self._item2bundle = read_json(item2bundle_file_str) or []
         self._imported = {
             "bundles": 0,
         }

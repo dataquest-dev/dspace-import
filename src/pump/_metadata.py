@@ -154,8 +154,8 @@ class metadatas:
         self._dspace = dspace
         self._values = {}
 
-        self._field_v7 = read_json(field_file_v7_str) or {}
-        self._schemas_v7 = read_json(schema_file_v7_str) or {}
+        self._field_v7 = read_json(field_file_v7_str) or []
+        self._schemas_v7 = read_json(schema_file_v7_str) or []
         if not self._field_v7:
             _logger.info(f"Empty input: [{field_file_v7_str}].")
         if not self._schemas_v7:
@@ -170,8 +170,8 @@ class metadatas:
                 f"{self._schemas_id2short_id_v7[f['metadata_schema_id']]}.{f['element']}.{f['qualifier']}"] =\
                 f['metadata_field_id']
 
-        self._fields_v5 = read_json(field_file_v5_str) or {}
-        self._schemas_v5 = read_json(schema_file_v5_str) or {}
+        self._fields_v5 = read_json(field_file_v5_str) or []
+        self._schemas_v5 = read_json(schema_file_v5_str) or []
         if not self._fields_v5:
             _logger.info(f"Empty input: [{field_file_v5_str}].")
         if not self._schemas_v5:
@@ -221,7 +221,7 @@ class metadatas:
             sponsor_field_id = sponsors[0]['metadata_field_id']
 
         # norm
-        js_value = read_json(value_file_v5_str) or {}
+        js_value = read_json(value_file_v5_str) or []
         if not js_value:
             _logger.info(f"Empty input: [{value_file_v5_str}].")
 

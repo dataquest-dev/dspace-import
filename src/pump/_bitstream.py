@@ -38,8 +38,8 @@ class bitstreams:
     ]
 
     def __init__(self, bitstream_file_str: str, bundle2bitstream_file_str: str):
-        self._bs = read_json(bitstream_file_str) or {}
-        self._bundle2bs = read_json(bundle2bitstream_file_str) or {}
+        self._bs = read_json(bitstream_file_str) or []
+        self._bundle2bs = read_json(bundle2bitstream_file_str) or []
 
         self._id2uuid = {}
         self._imported = {

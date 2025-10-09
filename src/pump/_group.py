@@ -70,8 +70,8 @@ class groups:
     DEF_GID_ADMIN = "1"
 
     def __init__(self, eperson_file_str: str, g2g_file_str: str):
-        self._eperson = read_json(eperson_file_str) or {}
-        self._g2g = read_json(g2g_file_str) or {}
+        self._eperson = read_json(eperson_file_str) or []
+        self._g2g = read_json(g2g_file_str) or []
         self._imported = {
             "eperson": 0,
             "group": 0,

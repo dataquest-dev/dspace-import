@@ -24,13 +24,13 @@ class collections:
     BITSTREAM = "BITSTREAM"
 
     def __init__(self, col_file_str: str, com2col_file_str: str, metadata_file_str: str):
-        self._col = read_json(col_file_str) or {}
-        self._com2col = read_json(com2col_file_str) or {}
+        self._col = read_json(col_file_str) or []
+        self._com2col = read_json(com2col_file_str) or []
         self._imported = {
             "col": 0,
             "group": 0,
         }
-        self._metadata_values = read_json(metadata_file_str) or {}
+        self._metadata_values = read_json(metadata_file_str) or []
         self._id2uuid = {}
 
         self._logos = {}

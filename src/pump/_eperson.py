@@ -47,7 +47,7 @@ class epersons:
     TYPE = 7
 
     def __init__(self, eperson_file_str: str):
-        self._epersons = read_json(eperson_file_str) or {}
+        self._epersons = read_json(eperson_file_str) or []
         self._imported = {
             "p": 0,
         }
@@ -156,7 +156,7 @@ class groups:
     """
 
     def __init__(self, egroups_file_str: str):
-        self._groups = read_json(egroups_file_str) or {}
+        self._groups = read_json(egroups_file_str) or []
         self._imported = {
             "group": 0,
         }

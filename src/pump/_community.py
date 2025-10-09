@@ -19,8 +19,8 @@ class communities:
     TYPE = 4
 
     def __init__(self, com_file_str: str, com2com_file_str: str):
-        self._com = read_json(com_file_str) or {}
-        self._com2com = read_json(com2com_file_str) or {}
+        self._com = read_json(com_file_str) or []
+        self._com2com = read_json(com2com_file_str) or []
         self._imported = {
             "com": 0,
             "group": 0,

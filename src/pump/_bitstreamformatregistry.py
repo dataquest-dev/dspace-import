@@ -24,8 +24,8 @@ class bitstreamformatregistry:
     ]
 
     def __init__(self, bfr_file_str: str, fe_file_str: str):
-        self._reg = read_json(bfr_file_str) or {}
-        self._fe = read_json(fe_file_str) or {}
+        self._reg = read_json(bfr_file_str) or []
+        self._fe = read_json(fe_file_str) or []
         self._imported = {
             "reg": 0,
             "existed": 0,
