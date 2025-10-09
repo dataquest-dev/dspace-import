@@ -58,6 +58,9 @@ if __name__ == "__main__":
     parser.add_argument('--tempdb',
                         help='Tempdb export exists',
                         required=False, action="store_true", default=False)
+    parser.add_argument('--test',
+                        help='Test of empty tables',
+                        required=False, action="store_true", default=False)
 
     args = parser.parse_args()
     s = time.time()
@@ -91,6 +94,7 @@ if __name__ == "__main__":
     )
 
     env["tempdb"] = args.tempdb
+    env["test"] = args.test
     _logger.info("Loading repo objects")
     repo = pump.repo(env, dspace_be)
 

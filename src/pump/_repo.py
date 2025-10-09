@@ -52,6 +52,10 @@ class repo:
 
         def _f(table_name):
             """ Dynamically export the table to json file and return path to it in v5. """
+
+            if env["test"]:
+                return os.path.join(env["input"]["tempdbexport_v5_test"], f"{table_name}.json")
+
             os.makedirs(env["input"]["tempdbexport_v5"], exist_ok=True)
             out_f = os.path.join(env["input"]["tempdbexport_v5"], f"{table_name}.json")
             if not env["tempdb"]:
