@@ -59,8 +59,8 @@ if __name__ == "__main__":
                         help='Tempdb export exists',
                         required=False, action="store_true", default=False)
     parser.add_argument('--test',
-                        help='Test of empty tables',
-                        required=False, action="store_true", default=False)
+                        help='Empty table test',
+                        required=False, nargs='*', default=[])
 
     args = parser.parse_args()
     s = time.time()
