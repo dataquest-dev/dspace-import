@@ -122,8 +122,8 @@ class usermetadatas:
 
     def deserialize(self, file_str: str):
         data = deserialize(file_str) or {}
-        self._umeta = data["umeta"]
-        self._uallowance = data["uallowance"]
-        self._rmap = data["rmap"]
-        self._id2uuid = data["id2uuid"]
-        self._imported = data["imported"]
+        self._umeta = data.get("umeta", {})
+        self._uallowance = data.get("uallowance", {})
+        self._rmap = data.get("rmap", {})
+        self._id2uuid = data.get("id2uuid", {})
+        self._imported = data.get("imported", {"um": 0})
