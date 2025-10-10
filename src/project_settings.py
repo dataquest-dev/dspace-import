@@ -9,8 +9,8 @@ settings = {
     "resume_dir": "__temp/resume/",
 
     "backend": {
-        "endpoint": "http://dev-5.pc:85/server/api/",
-        "user": "test@test.edu",
+        "endpoint": "http://dev-5.pc:85/repository/server/api/",
+        "user": "dspace.admin.dev@dataquest.sk",
         "password": "admin",
         "authentication": True,
         "testing": True,
@@ -71,6 +71,8 @@ settings = {
         "tempdbexport_v5": os.path.join(_this_dir, "../input/tempdbexport_v5"),
         "tempdbexport_v7": os.path.join(_this_dir, "../input/tempdbexport_v7"),
         "icondir": os.path.join(_this_dir, "../input/icon"),
+        "test": os.path.join(_this_dir, "../input/test"),
+        "test_json_filename": "test.json",
     },
 
     "licenses": {
