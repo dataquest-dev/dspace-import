@@ -160,8 +160,6 @@ class groups:
         self._imported = {
             "group": 0,
         }
-        if not self._groups:
-            _logger.info(f"Empty input: [{egroups_file_str}].")
 
         self._id2uuid = {}
 
