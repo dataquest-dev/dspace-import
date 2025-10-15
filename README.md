@@ -26,8 +26,6 @@ because we use this endpoint for importing existing data.
    pip install -r requirements.txt
    pip install -r libs/dspace-rest-python/requirements.txt
    ```
-   
-   **PostgreSQL adapter note:** If `psycopg2` installation fails (missing PostgreSQL dev headers or C compiler), you can replace `psycopg2` with `psycopg2-binary` in `requirements.txt` for easier installation.
 
 5. Get database dump (old CLARIN-DSpace) and unzip it into `input/dump` directory in `dspace-python-api` project.
 
@@ -54,6 +52,7 @@ aca.png  by.png  gplv2.png  mit.png    ...
 ```
 
 **Note:** `input/icon/` contains license icons (PNG files).
+
 9. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
 Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` directly with your database.
 
