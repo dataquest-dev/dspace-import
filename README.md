@@ -13,22 +13,32 @@ there exists automatic function that sends email, what we don't want
 because we use this endpoint for importing existing data.
 
 ### Prerequisites:
-1. Install CLARIN-DSpace7.*. (postgres, solr, dspace backend)
+1. **Python 3.8+** (tested with Python 3.11)
 
-2.1. Clone python-api: https://github.com/dataquest-dev/dspace-python-api (branch `main`) and https://github.com/dataquest-dev/DSpace (branch `dtq-dev`)
-2.2. Clone submodules:
-2.2.1.: `git submodule update --init libs/dspace-rest-python/`
+2. Install CLARIN-DSpace7.*. (postgres, solr, dspace backend)
 
-2. Get database dump (old CLARIN-DSpace) and unzip it into `input/dump` directory in `dspace-python-api` project.
+3.1. Clone python-api: https://github.com/dataquest-dev/dspace-python-api (branch `main`) and https://github.com/dataquest-dev/DSpace (branch `dtq-dev`)
+3.2. Clone submodules:
+3.2.1.: `git submodule update --init libs/dspace-rest-python/`
+
+4. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   pip install -r libs/dspace-rest-python/requirements.txt
+   ```
+   
+   **PostgreSQL adapter note:** If `psycopg2` installation fails (missing PostgreSQL dev headers or C compiler), you can replace `psycopg2` with `psycopg2-binary` in `requirements.txt` for easier installation.
+
+5. Get database dump (old CLARIN-DSpace) and unzip it into `input/dump` directory in `dspace-python-api` project.
 
 ***
-3. Go to the `dspace/bin` in dspace7 installation and run the command `dspace database migrate force` (force because of local types).
+6. Go to the `dspace/bin` in dspace7 installation and run the command `dspace database migrate force` (force because of local types).
 **NOTE:** `dspace database migrate force` creates default database data that may be not in database dump, so after migration, some tables may have more data than the database dump. Data from database dump that already exists in database is not migrated.
 
-4. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
+7. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
 
 ***
-5. Prepare `dspace-python-api` project for migration
+8. Prepare `dspace-python-api` project for migration
 
 - copy the files used during migration into `input/` directory:
 ```
@@ -42,21 +52,29 @@ clarin-dspace.sql  clarin-utilities.sql
 input/icon:
 aca.png  by.png  gplv2.png  mit.png    ...
 ```
-6. 
-7. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
+
+**Note:** `input/icon/` contains license icons (PNG files). Optional - folder doesn't need to exist, but missing icons will log errors (this is expected behavior).
+9. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
 Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` directly with your database.
 
 ***
-9. update `project_settings.py`
+10. Update `project_settings.py`
 
 ***
-10. Make sure, your backend configuration (`dspace.cfg`) includes all handle prefixes from generated handle json in property `handle.additional.prefixes`, 
-e.g.,`handle.additional.prefixes = 11858, 11234, 11372, 11346, 20.500.12801, 20.500.12800`
+11. Make sure that handle prefixes are configured in the backend configuration (`dspace.cfg`):
+   - Set your main handle prefix in `handle.prefix`
+   - Add all other handle prefixes to `handle.additional.prefixes`
+   - **Note:** The main prefix should NOT be included in `handle.additional.prefixes`
+   - **Example:** 
+     ```
+     handle.prefix = 123456789
+     handle.additional.prefixes = 11858, 11234, 11372, 11346, 20.500.12801, 20.500.12800
+     ```
 
-11. Copy `assetstore` from dspace5 to dspace7 (for bitstream import). `assetstore` is in the folder where you have installed DSpace `dspace/assetstore`.
+12. Copy `assetstore` from dspace5 to dspace7 (for bitstream import). `assetstore` is in the folder where you have installed DSpace `dspace/assetstore`.
 
 ***
-11. Import
+13. Import
 - **NOTE:** database must be up to date (`dspace database migrate force` must be called in the `dspace/bin`)
 - **NOTE:** dspace server must be running
 - run command `cd ./src && python repo_import.py`
