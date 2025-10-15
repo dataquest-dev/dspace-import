@@ -13,7 +13,7 @@ there exists automatic function that sends email, what we don't want
 because we use this endpoint for importing existing data.
 
 ### Prerequisites:
-1. **Python 3.8+** (tested with Python 3.11)
+1. **Python 3.8+** (tested with 3.8.10 and 3.11)
 
 2. Install CLARIN-DSpace7.*. (postgres, solr, dspace backend)
 
@@ -53,7 +53,7 @@ input/icon:
 aca.png  by.png  gplv2.png  mit.png    ...
 ```
 
-**Note:** `input/icon/` contains license icons (PNG files). Optional - folder doesn't need to exist, but missing icons will log errors (this is expected behavior).
+**Note:** `input/icon/` contains license icons (PNG files).
 9. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
 Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` directly with your database.
 
