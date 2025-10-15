@@ -9,7 +9,7 @@ settings = {
     "resume_dir": "__temp/resume/",
 
     "backend": {
-        "endpoint": "http://dev-5.pc:85/repository/server/api/",
+        "endpoint": "http://dev-5.pc:88/repository/server/api/",
         "user": "dspace.admin.dev@dataquest.sk",
         "password": "admin",
         "authentication": True,
@@ -46,16 +46,16 @@ settings = {
         "name": "dspace",
         "host": "localhost",
         # careful - NON standard port
-        "port": 5435,
-        "user": "dspace",
-        "password": "dspace",
+        "port": 5432,
+        "user": "postgres",
+        "password": "postgres",
     },
 
     "db_dspace_5": {
         "name": "clarin-dspace",
         "host": "localhost",
         "user": "postgres",
-        "password": "dspace",
+        "password": "postgres",
         "port": 5432,
     },
 
@@ -63,7 +63,7 @@ settings = {
         "name": "clarin-utilities",
         "host": "localhost",
         "user": "postgres",
-        "password": "dspace",
+        "password": "postgres",
         "port": 5432,
     },
 
