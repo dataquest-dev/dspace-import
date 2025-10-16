@@ -53,7 +53,7 @@ aca.png  by.png  gplv2.png  mit.png    ...
 9. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
 
 10. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
-Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` directly with your database.
+Run `scripts/start.local.dspace.db.bat` or use `scripts/init.dspacedb5.sh` directly with your database.
 
 ***
 11. Update `project_settings.py`
