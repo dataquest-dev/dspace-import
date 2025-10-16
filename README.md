@@ -16,29 +16,19 @@ because we use this endpoint for importing existing data.
 1. **Python 3.8+** (tested with 3.8.10 and 3.11)
 
 2. Install CLARIN-DSpace7.*. (postgres, solr, dspace backend)
+   2.1. Clone python-api: https://github.com/ufal/dspace-python-api (branch `main`)
+   2.2. Clone submodules: `git submodule update --init libs/dspace-rest-python/`
 
-3.1. Clone python-api: https://github.com/dataquest-dev/dspace-python-api (branch `main`) and https://github.com/dataquest-dev/DSpace (branch `dtq-dev`)
-3.2. Clone submodules:
-3.2.1.: `git submodule update --init libs/dspace-rest-python/`
-
-4. Install Python dependencies:
+3. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
    pip install -r libs/dspace-rest-python/requirements.txt
    ```
-
-5. Get database dump (old CLARIN-DSpace) and unzip it into `input/dump` directory in `dspace-python-api` project.
-
+   
 ***
-6. Go to the `dspace/bin` in dspace7 installation and run the command `dspace database migrate force` (force because of local types).
-**NOTE:** `dspace database migrate force` creates default database data that may be not in database dump, so after migration, some tables may have more data than the database dump. Data from database dump that already exists in database is not migrated.
+4. Get database dump (old CLARIN-DSpace) and unzip it into `input/dump` directory in `dspace-python-api` project.
 
-7. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
-
-***
-8. Prepare `dspace-python-api` project for migration
-
-- copy the files used during migration into `input/` directory:
+5. Prepare `dspace-python-api` project for migration: copy the files used during migration into `input/` directory:
 ```
 > ls -R ./input
 input:
@@ -53,14 +43,22 @@ aca.png  by.png  gplv2.png  mit.png    ...
 
 **Note:** `input/icon/` contains license icons (PNG files).
 
-9. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
+6. Copy `assetstore` from dspace5 to dspace7 (for bitstream import). `assetstore` is in the folder where you have installed DSpace `dspace/assetstore`.
+
+7. Create `dspace` database with extension `pgcrypto`.
+
+8. Go to the `dspace/bin` in dspace7 installation and run the command `dspace database migrate force` (force because of local types).
+**NOTE:** `dspace database migrate force` creates default database data that may be not in database dump, so after migration, some tables may have more data than the database dump. Data from database dump that already exists in database is not migrated.
+
+9. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
+
+10. Create CLARIN-DSpace5.* databases (dspace, utilities) from dump.
 Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` directly with your database.
 
 ***
-10. Update `project_settings.py`
+11. Update `project_settings.py`
 
-***
-11. Make sure that handle prefixes are configured in the backend configuration (`dspace.cfg`):
+12. Make sure that handle prefixes are configured in the backend configuration (`dspace.cfg`):
    - Set your main handle prefix in `handle.prefix`
    - Add all other handle prefixes to `handle.additional.prefixes`
    - **Note:** The main prefix should NOT be included in `handle.additional.prefixes`
@@ -70,18 +68,15 @@ Run `scripts/start.local.dspace.db.bat` or use `scipts/init.dspacedb5.sh` direct
      handle.additional.prefixes = 11858, 11234, 11372, 11346, 20.500.12801, 20.500.12800
      ```
 
-12. Copy `assetstore` from dspace5 to dspace7 (for bitstream import). `assetstore` is in the folder where you have installed DSpace `dspace/assetstore`.
-
 ***
-13. Import
+13. Import: Run command `cd ./src && python repo_import.py`
 - **NOTE:** database must be up to date (`dspace database migrate force` must be called in the `dspace/bin`)
 - **NOTE:** dspace server must be running
-- run command `cd ./src && python repo_import.py`
 
 ## !!!Migration notes:!!!
 - The values of table attributes that describe the last modification time of dspace object (for example attribute `last_modified` in table `Item`) have a value that represents the time when that object was migrated and not the value from migrated database dump.
 - If you don't have valid and complete data, not all data will be imported.
-- check if license link contains XXX. This is of course unsuitable for production run!
+- Check if license link contains XXX. This is of course unsuitable for production run!
 
 ## Check import consistency
 
