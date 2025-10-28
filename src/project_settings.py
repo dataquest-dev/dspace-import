@@ -79,5 +79,7 @@ settings = {
         "to_replace_def_url": "https://lindat.mff.cuni.cz/repository/xmlui/page/",
         # TODO(jm): replace with correct url
         "replace_with_def_url": "http://dev-5.pc:85/XXX/static/",
-    }
+    },
+
+    "version_date_fields": ["dc.date.issued", "dc.date.accessioned"]
 }
