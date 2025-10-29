@@ -461,7 +461,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 # If the item is withdrawn the new version could be stored in our repo or in another. Do import that version
                 # only if the item is stored in our repo.
                 if i_handle_d is None:
-                    current_item = self.item(item_id)
+                    current_item = self._id2item.get(str(item_id))
                     if current_item and current_item.get('withdrawn'):
                         _logger.info(
                             f"The item handle: {i_handle} cannot be migrated because it is stored in another repository."
@@ -573,7 +573,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
 
             if cur_item_version not in metadatas.versions:
                 # Check if current item is withdrawn
-                cur_item = self.item(cur_item_id)
+                cur_item = self._id2item.get(str(cur_item_id))
                 if cur_item['withdrawn']:
                     _logger.debug(f'Item [{cur_item_version}] is withdrawn')
                     self._versions["withdrawn"].append(cur_item_version)
@@ -586,8 +586,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             next_item_id = metadatas.versions[cur_item_version]['item_id']
             next_item_version = _get_version(next_item_id)
             if next_item_version in visited:
-                if next_item_version is not None:
-                    versions.append(next_item_version)
+                versions.append(next_item_version)
                 break
             cur_item_id = next_item_id
             cur_item_version = next_item_version
