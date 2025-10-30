@@ -490,19 +490,41 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                     # or "dc.date" into element="date", qualifier=None
                     field_parts = date_field.split(".")
                     if len(field_parts) >= 2:
+                        short_id = field_parts[0]
                         element = field_parts[1]
                         qualifier = field_parts[2] if len(field_parts) > 2 else None
 
                         # Single query that handles both qualified and unqualified fields
                         qualifier_condition = f"and qualifier = '{qualifier}'" if qualifier else "and qualifier IS NULL"
-                        version_date_issued = db7.fetch_one(
-                            "SELECT text_value from metadatavalue " +
-                            f"where dspace_object_id = '{item_uuid}' " +
-                            "and metadata_field_id in " +
-                            "(select metadata_field_id from metadatafieldregistry " +
-                            f"where metadata_schema_id = 1 and element = '{element}' " +
-                            f"{qualifier_condition});"
-                        )
+
+                        query = """
+                                SELECT text_value
+                                FROM metadatavalue
+                                WHERE dspace_object_id = %s
+                                  AND metadata_field_id IN (
+                                    SELECT metadata_field_id
+                                    FROM metadatafieldregistry
+                                    WHERE metadata_schema_id = (
+                                      SELECT metadata_schema_id
+                                      FROM metadataschemaregistry
+                                      WHERE short_id = %s
+                                    )
+                                    AND element = %s
+                                    {qualifier_condition}
+                                  );
+                            """.format(qualifier_condition=qualifier_condition)
+                        params = [item_uuid, short_id, element]
+                        if qualifier:
+                            params.append(qualifier)
+                        placeholder_count = query.count("%s")
+                        if placeholder_count != len(params):
+                            _logger.error(
+                                "Placeholder/param mismatch: %d placeholders vs %d params. Query:\n%s\nParams:%s",
+                                placeholder_count, len(params), query, params
+                            )
+                            raise RuntimeError("SQL placeholder/parameter mismatch")
+
+                        version_date_issued = db7.fetch_one(query, tuple(params))
                     else:
                         _logger.critical(f"Invalid date field format: '{date_field}'.")
                         continue
