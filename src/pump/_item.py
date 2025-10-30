@@ -8,6 +8,12 @@ class items:
     """
         SQL:
             delete from workspaceitem ;
+
+            Required Configuration in project_settings.py:
+                version_date_fields: List of date fields to try when migrating versions.
+                                    Fields are tried in order until one with a value is found.
+                                    If none are found, version import is skipped with critical error.
+                                    This configuration is REQUIRED and must be explicitly set.
     """
     TYPE = 2
     validate_table = [
@@ -413,6 +419,14 @@ class items:
 
         self._migrated_versions = []
 
+        # Get version date fields from project settings
+        # Must be configured in project_settings.py as version_date_fields
+        date_fields_to_try = env.get("version_date_fields")
+        if not date_fields_to_try:
+            _logger.critical("version_date_fields not configured in project settings!")
+            raise ValueError(
+                "version_date_fields configuration is required but not found in project settings")
+
         # Migrate versions for every Item
         for item_id, item in progress_bar(self._id2item.items()):
             # Do not process versions of the item that have already been processed.
@@ -447,27 +461,90 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                 # If the item is withdrawn the new version could be stored in our repo or in another. Do import that version
                 # only if the item is stored in our repo.
                 if i_handle_d is None:
-                    current_item = self.item(item_id)
-                    if current_item['withdrawn']:
+                    current_item = self._id2item.get(str(item_id))
+                    if current_item and current_item.get('withdrawn'):
                         _logger.info(
-                            f'The item handle: {i_handle} cannot be migrated because it is stored in another repository.')
-                        continue
+                            f"The item handle: {i_handle} cannot be migrated because it is stored in another repository."
+                        )
+                    else:
+                        _logger.error(
+                            f"Missing handle data for item {item_id}. "
+                            f"Item may not exist or handle lookup failed. Skipping migration."
+                        )
+                    continue
 
                 # Get item_id using the handle
                 item_id = i_handle_d['item_id']
                 # Get the uuid of the item using the item_id
                 item_uuid = self.uuid(item_id)
-                # Get the date issued of the version - use it instead of `timestamp` value
-                # `metadata_schema_id = 1` is `dc`
-                version_date_issued = db7.fetch_one("SELECT text_value from metadatavalue " +
-                                                    f"where dspace_object_id = '{item_uuid}' " +
-                                                    "and metadata_field_id in " +
-                                                    "(select metadata_field_id from metadatafieldregistry " +
-                                                    "where metadata_schema_id = 1 and element = 'date' " +
-                                                    "and qualifier = 'issued');")
+                if not item_uuid:
+                    _logger.critical(
+                        f"Cannot find UUID for item ID {item_id} with handle {i_handle}. "
+                        f"Skipping version import for this item.")
+                    continue
+
+                version_date_issued = None
+
+                for date_field in date_fields_to_try:
+                    # Parse field like "dc.date.issued" into element="date", qualifier="issued"
+                    # or "dc.date" into element="date", qualifier=None
+                    field_parts = date_field.split(".")
+                    if len(field_parts) >= 2:
+                        short_id = field_parts[0]
+                        element = field_parts[1]
+                        qualifier = field_parts[2] if len(field_parts) > 2 else None
+
+                        # Single query that handles both qualified and unqualified fields
+                        qualifier_condition = f"and qualifier = '{qualifier}'" if qualifier else "and qualifier IS NULL"
+
+                        query = """
+                                SELECT text_value
+                                FROM metadatavalue
+                                WHERE dspace_object_id = %s
+                                  AND metadata_field_id IN (
+                                    SELECT metadata_field_id
+                                    FROM metadatafieldregistry
+                                    WHERE metadata_schema_id = (
+                                      SELECT metadata_schema_id
+                                      FROM metadataschemaregistry
+                                      WHERE short_id = %s
+                                    )
+                                    AND element = %s
+                                    {qualifier_condition}
+                                  );
+                            """.format(qualifier_condition=qualifier_condition)
+                        params = [item_uuid, short_id, element]
+                        if qualifier:
+                            params.append(qualifier)
+                        placeholder_count = query.count("%s")
+                        if placeholder_count != len(params):
+                            _logger.error(
+                                "Placeholder/param mismatch: %d placeholders vs %d params. Query:\n%s\nParams:%s",
+                                placeholder_count, len(params), query, params
+                            )
+                            raise RuntimeError("SQL placeholder/parameter mismatch")
+
+                        version_date_issued = db7.fetch_one(query, tuple(params))
+                    else:
+                        _logger.critical(f"Invalid date field format: '{date_field}'.")
+                        continue
+
+                    if version_date_issued is not None:
+                        _logger.debug(
+                            f"Found version date from field '{date_field}' for item UUID {item_uuid}: {version_date_issued}")
+                        break
+
+                # Handle case where no date metadata is found in any of the configured fields
+                if version_date_issued is None:
+                    _logger.critical(
+                        f"No version date found for item UUID {item_uuid} in any of the configured fields: {date_fields_to_try}. Skipping version import for this item.")
+                    continue
+
+                version_date_sql = f"TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD')"
+
                 db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
                             f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
-                            f"({versionitem_new_id}, {index}, TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD'), "
+                            f"({versionitem_new_id}, {index}, {version_date_sql}, "
                             f"'', {versionhistory_new_id}, '{admin_uuid}', '{item_uuid}');")
                 # Update sequence
                 db7.exe_sql(f"SELECT setval('versionitem_seq', {versionitem_new_id})")
@@ -504,18 +581,22 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
 
         versions = []
         cur_item_id = item_id
+        visited = set()
 
-        # current_version is handle of previous or newer item
         cur_item_version = _get_version(cur_item_id)
 
         while cur_item_version is not None:
-            #
+            if cur_item_version in visited:
+                _logger.warning(
+                    f"Detected cyclic version reference for handle: {cur_item_version}. Breaking loop.")
+                break
+            visited.add(cur_item_version)
+            versions.append(cur_item_version)
+
             if cur_item_version not in metadatas.versions:
                 # Check if current item is withdrawn
-                # TODO(jm): check original code - item_id
-                cur_item = self.item(cur_item_id)
+                cur_item = self._id2item.get(str(cur_item_id))
                 if cur_item['withdrawn']:
-                    # The item is withdrawn and stored in another repository
                     _logger.debug(f'Item [{cur_item_version}] is withdrawn')
                     self._versions["withdrawn"].append(cur_item_version)
                 else:
@@ -524,9 +605,13 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                     self._versions["not_imported"].append(cur_item_version)
                 break
 
-            versions.append(cur_item_version)
-            cur_item_id = metadatas.versions[cur_item_version]['item_id']
-            cur_item_version = _get_version(cur_item_id)
+            next_item_id = metadatas.versions[cur_item_version]['item_id']
+            next_item_version = _get_version(next_item_id)
+            if next_item_version in visited:
+                versions.append(next_item_version)
+                break
+            cur_item_id = next_item_id
+            cur_item_version = next_item_version
 
         return versions
 

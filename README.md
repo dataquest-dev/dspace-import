@@ -68,6 +68,28 @@ Run `scripts/start.local.dspace.db.bat` or use `scripts/init.dspacedb5.sh` direc
      handle.additional.prefixes = 11858, 11234, 11372, 11346, 20.500.12801, 20.500.12800
      ```
 
+## Version Date Fields Configuration
+
+**REQUIRED:** Configure version date fields in `project_settings.py` for version migration. This configuration is mandatory and must be explicitly set.
+
+Add the following to your `project_settings.py`:
+```python
+"version_date_fields": ["dc.date.issued", "dc.date.accessioned", "dc.date.created"]
+```
+
+### How it works:
+- **Purpose**: When migrating item versions, the system needs a date field to set the version date
+- **Fallback mechanism**: Fields are tried in order until one with a value is found
+- **Supported formats**: 
+  - `"dc.element.qualifier"` (e.g., `"dc.date.issued"`)
+  - `"dc.element"` (e.g., `"dc.date"`)
+- **Error handling**: If no configured field contains a date value for an item, that item's version migration is skipped with a critical error
+
+### Common configuration examples:
+```python
+"version_date_fields": ["dc.date.issued", "dc.date.accessioned"]
+```
+
 ***
 13. Import: Run command `cd ./src && python repo_import.py`
 - **NOTE:** database must be up to date (`dspace database migrate force` must be called in the `dspace/bin`)
