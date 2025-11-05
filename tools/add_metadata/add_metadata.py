@@ -425,7 +425,7 @@ class additional_stats:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Add metadata for DSpace items")
     parser.add_argument("--to_mtd_field",
-                        type=str, required=False, help="Metadata field to be created or updated.")
+                        type=str, required=False, help="Metadata field to be created or updated (required unless --fix-date-format is used).")
     parser.add_argument("--from_mtd_field",
                         type=str, nargs='+', required=False,
                         help="Metadata field(s) from which value(s) can be used.")
