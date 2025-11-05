@@ -11,23 +11,8 @@ python add_metadata.py --dry-run --endpoint="http://dev-5.pc:86/server/api/" --t
 
 ## Fix date format in dc.date.issued
 
-This mode corrects date formats in existing `dc.date.issued` fields without using other metadata fields. 
-
-**Behavior:**
-- **Null/empty values**: Kept untouched
-- **Year-only values** (`YYYY`): Kept as-is (e.g., `2020` stays `2020`)
-- **Full dates with wrong format**: Converted to `YYYY-MM-DD` (e.g., `30.5.2025` → `2025-05-30`)
-- **Partial dates**: Converted to year-only format (e.g., `5/2025` → `2025`)
-- **Anomalies**: Unparseable dates are logged and reported
-
-Dry run:
 ```
-python add_metadata.py --fix-date-format --dry-run
-```
-
-Real run:
-```
-python add_metadata.py --fix-date-format
+python add_metadata.py --fix-date-format --endpoint="https://dspace.tul.cz/server/api/" --user="..." --password="..."
 ```
 
 ## TUL fix date format in dc.date.issued
