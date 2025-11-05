@@ -9,12 +9,6 @@ Dry run:
 python add_metadata.py --dry-run --endpoint="http://dev-5.pc:86/server/api/" --to_mtd_field dc.date.issued --from_mtd_field dc.date.submitted dc.date.committed dc.date.defense dc.date
 ```
 
-## Fix date format in dc.date.issued
-
-```
-python add_metadata.py --fix-date-format --endpoint="https://dspace.tul.cz/server/api/" --user="..." --password="..."
-```
-
 ## TUL fix date format in dc.date.issued
 
 ```
