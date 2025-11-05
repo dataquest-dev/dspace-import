@@ -2,19 +2,19 @@
 Check test.example package. Everything necessary should be there.
 
 Test data are in `test/data` folder.
-If your test data contains special characters like čřšáý and so on, it is recommended
+If your test data contains special characters such as čřšáý, it is recommended
 to make `.stripped` variation of the file. 
 E.g. `my_format.json` and `my_format.stripped.json` for loading data
 and `my_format.test.xml` and `my_format.test.stripped.xml` for testing.
 
-If not on dev-5 (e.g. when run on localhost), `.stripped` version of files will be loaded.
-The reason for this is, that when dspace runs on windows, it has trouble with special characters.
+If not on dev-5 (e.g., when run on localhost), `.stripped` version of files will be loaded.
+The reason for this is that when DSpace runs on Windows, it has trouble with special characters.
 
 
 ## Settings
-See const.py for constants used at testing.
+See const.py for constants used in testing.
 
-To set up logs, navigate to support.logs.py and modify method set_up_logging.
+To set up logs, navigate to support.logs.py and modify the method set_up_logging.
 
 ## Run
 
@@ -41,6 +41,6 @@ Recreate your local CLARIN-DSpace7.* database **NOTE: all data will be deleted**
 - Or try to run these commands in the <PSQL_PATH>/bin:
 > - `createdb --username=postgres --owner=dspace --encoding=UNICODE dspace` // create database
 > - `psql --username=postgres dspace -c "CREATE EXTENSION pgcrypto;"` // Add pgcrypto extension
-> > If it throws warning that `-c` parameter was ignored, just write a `CREATE EXTENSION pgcrypto;` command in the database cmd.
+> > If it throws a warning that the `-c` parameter was ignored, just write a `CREATE EXTENSION pgcrypto;` command in the database cmd.
 > > CREATE EXTENSION pgcrypto;
 ![image](https://user-images.githubusercontent.com/90026355/228528044-f6ad178c-f525-4b15-b6cc-03d8d94c8ccc.png)
