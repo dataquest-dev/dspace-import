@@ -17,7 +17,7 @@ This mode corrects date formats in existing `dc.date.issued` fields without usin
 - **Null/empty values**: Kept untouched
 - **Year-only values** (`YYYY`): Kept as-is (e.g., `2020` stays `2020`)
 - **Full dates with wrong format**: Converted to `YYYY-MM-DD` (e.g., `30.5.2025` → `2025-05-30`)
-- **Partial dates**: Converted to `YYYY-MM-DD` with `01` for missing parts (e.g., `5/2025` → `2025-05-01`)
+- **Partial dates**: Converted to year-only format (e.g., `5/2025` → `2025`)
 - **Anomalies**: Unparseable dates are logged and reported
 
 Dry run:
