@@ -1,21 +1,21 @@
 [![Test dspace on dev-5](https://github.com/dataquest-dev/dspace-blackbox-testing/actions/workflows/test.yml/badge.svg)](https://github.com/dataquest-dev/dspace-blackbox-testing/actions/workflows/test.yml)
 
-# Dspace-python-api
-used for blackbox testing, data-ingestion procedures
+# DSpace-python-api
+Used for blackbox testing and data-ingestion procedures.
 
 # How to migrate CLARIN-DSpace5.* to CLARIN-DSpace7.*
 
 ### Important:
 Make sure that your email server is NOT running because some of the endpoints that are used
-are sending emails to the input email addresses. 
+send emails to the input email addresses. 
 For example, when using the endpoint for creating new registration data, 
-there exists automatic function that sends email, what we don't want
+an automatic function exists that sends emails, which we don't want
 because we use this endpoint for importing existing data.
 
 ### Prerequisites:
 1. **Python 3.8+** (tested with 3.8.10 and 3.11)
 
-2. Install CLARIN-DSpace7.*. (postgres, solr, dspace backend)
+2. Install CLARIN-DSpace7.*. (PostgreSQL, Solr, DSpace backend)
    2.1. Clone python-api: https://github.com/ufal/dspace-python-api (branch `main`)
    2.2. Clone submodules: `git submodule update --init libs/dspace-rest-python/`
 
@@ -47,8 +47,8 @@ aca.png  by.png  gplv2.png  mit.png    ...
 
 7. Create `dspace` database with extension `pgcrypto`.
 
-8. Go to the `dspace/bin` in dspace7 installation and run the command `dspace database migrate force` (force because of local types).
-**NOTE:** `dspace database migrate force` creates default database data that may be not in database dump, so after migration, some tables may have more data than the database dump. Data from database dump that already exists in database is not migrated.
+8. Go to the `dspace/bin` in DSpace 7 installation and run the command `dspace database migrate force` (force because of local types).
+**NOTE:** `dspace database migrate force` creates default database data that may not be in the database dump, so after migration, some tables may have more data than the database dump. Data from the database dump that already exists in the database is not migrated.
 
 9. Create an admin by running the command `dspace create-administrator` in the `dspace/bin`
 
@@ -95,10 +95,10 @@ Add the following to your `project_settings.py`:
 - **NOTE:** database must be up to date (`dspace database migrate force` must be called in the `dspace/bin`)
 - **NOTE:** dspace server must be running
 
-## !!!Migration notes:!!!
-- The values of table attributes that describe the last modification time of dspace object (for example attribute `last_modified` in table `Item`) have a value that represents the time when that object was migrated and not the value from migrated database dump.
+## !!!Migration Notes:!!!
+- The values of table attributes that describe the last modification time of DSpace objects (for example attribute `last_modified` in table `Item`) have a value that represents the time when that object was migrated and not the value from the migrated database dump.
 - If you don't have valid and complete data, not all data will be imported.
-- Check if license link contains XXX. This is of course unsuitable for production run!
+- Check if license link contains XXX. This is of course unsuitable for production runs!
 
 ## Check import consistency
 
