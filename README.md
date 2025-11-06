@@ -9,7 +9,7 @@ used for blackbox testing, data-ingestion procedures
 Make sure that your email server is NOT running because some of the endpoints that are used
 are sending emails to the input email addresses. 
 For example, when using the endpoint for creating new registration data, 
-there exists automatic function that sends email, what we don't want
+there exists an automatic function that sends email, which we do not want
 because we use this endpoint for importing existing data.
 
 ### Prerequisites:
