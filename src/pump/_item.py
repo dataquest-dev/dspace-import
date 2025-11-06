@@ -495,7 +495,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         qualifier = field_parts[2] if len(field_parts) > 2 else None
 
                         # Single query that handles both qualified and unqualified fields
-                        qualifier_condition = f"and qualifier = '{qualifier}'" if qualifier else "and qualifier IS NULL"
+                        qualifier_condition = "and qualifier = %s" if qualifier else "and qualifier IS NULL"
 
                         query = """
                                 SELECT text_value
