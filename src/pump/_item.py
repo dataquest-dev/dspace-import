@@ -495,36 +495,26 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         qualifier = field_parts[2] if len(field_parts) > 2 else None
 
                         # Single query that handles both qualified and unqualified fields
-                        qualifier_condition = "and qualifier = %s" if qualifier else "and qualifier IS NULL"
+                        qualifier_condition = f"AND qualifier = '{qualifier}'" if qualifier else "AND qualifier IS NULL"
 
-                        query = """
+                        query = f"""
                                 SELECT text_value
                                 FROM metadatavalue
-                                WHERE dspace_object_id = %s
+                                WHERE dspace_object_id = '{item_uuid}'
                                   AND metadata_field_id IN (
                                     SELECT metadata_field_id
                                     FROM metadatafieldregistry
                                     WHERE metadata_schema_id = (
                                       SELECT metadata_schema_id
                                       FROM metadataschemaregistry
-                                      WHERE short_id = %s
+                                      WHERE short_id = '{short_id}'
                                     )
-                                    AND element = %s
+                                    AND element = '{element}'
                                     {qualifier_condition}
                                   );
-                            """.format(qualifier_condition=qualifier_condition)
-                        params = [item_uuid, short_id, element]
-                        if qualifier:
-                            params.append(qualifier)
-                        placeholder_count = query.count("%s")
-                        if placeholder_count != len(params):
-                            _logger.error(
-                                "Placeholder/param mismatch: %d placeholders vs %d params. Query:\n%s\nParams:%s",
-                                placeholder_count, len(params), query, params
-                            )
-                            raise RuntimeError("SQL placeholder/parameter mismatch")
+                            """
 
-                        version_date_issued = db7.fetch_one(query, tuple(params))
+                        version_date_issued = db7.fetch_one(query)
                     else:
                         _logger.critical(f"Invalid date field format: '{date_field}'.")
                         continue
