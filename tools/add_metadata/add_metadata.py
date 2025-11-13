@@ -112,6 +112,31 @@ class date:
             _logger.debug(f"[{self._d}] is not valid date format (expected YYYY-MM-DD or YYYY)")
         return False
 
+    def is_valid_hybrid(self):
+        """Check if date is valid in YYYY-MM-DD, YYYY-MM, or YYYY format (all kept as-is)."""
+        # Check YYYY-MM-DD format
+        try:
+            datetime.strptime(self._d, '%Y-%m-%d')
+            return True
+        except ValueError:
+            pass
+        
+        # Check YYYY-MM format (partial date)
+        try:
+            datetime.strptime(self._d, '%Y-%m')
+            return True
+        except ValueError:
+            pass
+        
+        # Check YYYY format (year only)
+        if date.is_year_only(self._d):
+            return True
+        
+        date.invalid[self._d] += 1
+        if date.invalid[self._d] == 1:
+            _logger.debug(f"[{self._d}] is not valid date format (expected YYYY-MM-DD, YYYY-MM, or YYYY)")
+        return False
+
     def parse(self) -> bool:
         """Convert the value to a date format. Normalize date to 'YYYY-MM-DD' format, filling missing parts with '01'."""
         if len(self._d) < 1:
@@ -170,6 +195,45 @@ class date:
                 datetime_obj = datetime.strptime(self._d, parse_fmt)
                 # Extract only the year
                 self._d = datetime_obj.strftime('%Y')
+                return True
+            except ValueError:
+                continue
+        
+        _logger.warning(f"Error converting [{self._d}] to date.")
+        return False
+
+    def parse_hybrid(self) -> bool:
+        """Convert date with hybrid rules:
+        - Keep YYYY format as-is (year only)
+        - Keep YYYY-MM format as-is (partial date, but normalize separators)
+        - Convert full dates to YYYY-MM-DD format
+        """
+        if len(self._d) < 1:
+            return False
+
+        # Check if it's already year-only format (YYYY) - keep as-is
+        if date.is_year_only(self._d):
+            return True
+
+        # Try full date formats (with day, month, and year)
+        full_date_formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', 
+                             '%Y-%m-%d', '%d-%m-%Y', '%d. %m. %Y']
+        for fmt in full_date_formats:
+            try:
+                datetime_obj = datetime.strptime(self._d, fmt)
+                # Normalize to 'YYYY-MM-DD'
+                self._d = datetime_obj.strftime('%Y-%m-%d')
+                return True
+            except ValueError:
+                continue
+        
+        # Try partial date formats (year-month) - normalize to YYYY-MM
+        partial_formats = ['%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y']
+        for fmt in partial_formats:
+            try:
+                datetime_obj = datetime.strptime(self._d, fmt)
+                # Normalize to 'YYYY-MM' (keep as partial date)
+                self._d = datetime_obj.strftime('%Y-%m')
                 return True
             except ValueError:
                 continue
@@ -275,19 +339,35 @@ class updater:
         return updater.ret_updated
 
     def update_existing_metadata(self, item: dict, date_str: str, force: bool = False) -> int:
+        """Update existing metadata with hybrid rules:
+        - No null/empty handling (will crash on None)
+        - YYYY formats kept as-is
+        - Partial dates (YYYY-MM) kept as-is (normalized)
+        - Invalid dates logged as ANOMALY
+        """
         uuid = item['uuid']
         id_str = f"Item [{uuid}]: [{self._to_mtd_field}]"
         
+        # No null/empty handling - let it crash if needed
         date_val = date(date_str)
         if not force:
-            if date_val.is_valid():
-                self._info["valid"].append((uuid, date_val.input))
+            if date_val.is_valid_hybrid():
+                # Check if it's year-only or partial format
+                if date.is_year_only(date_str):
+                    self._info["valid_year_only"].append((uuid, date_val.input))
+                    _logger.info(f"{id_str}: year-only format [{date_str}] - keeping as-is")
+                elif len(date_str) == 7 and date_str[4] == '-':  # YYYY-MM format
+                    self._info["valid"].append((uuid, date_val.input))
+                    _logger.info(f"{id_str}: partial date format [{date_str}] - keeping as-is")
+                else:
+                    self._info["valid"].append((uuid, date_val.input))
                 return updater.ret_already_ok
 
-            parsed_ok = date_val.parse()
+            parsed_ok = date_val.parse_hybrid()
             if parsed_ok is False:
-                _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date")
+                _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date - ANOMALY")
                 self._info["invalid_date"].append((uuid, date_val.input))
+                self._info["anomalies"].append((uuid, date_val.input, "Cannot parse date format"))
                 return updater.ret_invalid_meta
 
         return self._perform_update(item, date_val, uuid, id_str)
@@ -384,11 +464,8 @@ class updater:
                         f"Forced metadata change but no value found for [{uuid}]")
                     return updater.ret_empty_meta
 
-            # Use relaxed method for fix-date-format mode
-            if self._fix_date_mode:
-                return self.update_existing_metadata_relaxed(item, val, force=force)
-            else:
-                return self.update_existing_metadata(item, val, force=force)
+            # Always use standard validation/parsing (no relaxed mode)
+            return self.update_existing_metadata(item, val, force=force)
         else:
             return self.add_new_metadata(item)
 
