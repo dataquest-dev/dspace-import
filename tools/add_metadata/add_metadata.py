@@ -83,35 +83,6 @@ class date:
         except ValueError:
             return False
 
-    def is_valid(self):
-        """Check if the given string is a valid date."""
-        try:
-            datetime.strptime(self._d, '%Y-%m-%d')
-            return True
-        except ValueError as e:
-            date.invalid[self._d] += 1
-            if date.invalid[self._d] == 1:
-                _logger.debug(f"[{self._d}] is not valid date. Error: {e}")
-            return False
-
-    def is_valid_relaxed(self):
-        """Check if the given string is a valid date in YYYY-MM-DD or YYYY format."""
-        # Check if it's already in YYYY-MM-DD format
-        try:
-            datetime.strptime(self._d, '%Y-%m-%d')
-            return True
-        except ValueError:
-            pass
-        
-        # Check if it's in YYYY format (year only - also valid)
-        if date.is_year_only(self._d):
-            return True
-        
-        date.invalid[self._d] += 1
-        if date.invalid[self._d] == 1:
-            _logger.debug(f"[{self._d}] is not valid date format (expected YYYY-MM-DD or YYYY)")
-        return False
-
     def is_valid_hybrid(self):
         """Check if date is valid in YYYY-MM-DD, YYYY-MM, or YYYY format (all kept as-is)."""
         # Check YYYY-MM-DD format
@@ -135,71 +106,6 @@ class date:
         date.invalid[self._d] += 1
         if date.invalid[self._d] == 1:
             _logger.debug(f"[{self._d}] is not valid date format (expected YYYY-MM-DD, YYYY-MM, or YYYY)")
-        return False
-
-    def parse(self) -> bool:
-        """Convert the value to a date format. Normalize date to 'YYYY-MM-DD' format, filling missing parts with '01'."""
-        if len(self._d) < 1:
-            return False
-
-        formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', '%Y',
-                   '%Y-%m', '%m-%Y', '%Y/%m', '%m/%Y', '%Y.%m', '%m.%Y', '%d. %m. %Y']
-        for fmt in formats:
-            try:
-                datetime_obj = datetime.strptime(self._d, fmt)
-                # Normalize date to 'YYYY-MM-DD'
-                if fmt in ['%Y-%m', '%Y/%m', '%Y.%m', '%m-%Y', "%m/%Y", "%m.%Y"]:
-                    self._d = datetime_obj.strftime('%Y-%m-01')
-                elif fmt == '%Y':
-                    self._d = datetime_obj.strftime('%Y-01-01')
-                else:
-                    self._d = datetime_obj.strftime('%Y-%m-%d')
-                return True
-            except ValueError:
-                # The test format does not match the input date format
-                continue
-        _logger.warning(f"Error converting [{self._d}] to date.")
-        return False
-
-    def parse_relaxed(self) -> bool:
-        """Convert the value to a date format with relaxed rules.
-        - Keep YYYY format as-is (year only is valid)
-        - If date is not full (missing month/day), extract only the year (YYYY)
-        - Only full dates are converted to 'YYYY-MM-DD' format
-        """
-        if len(self._d) < 1:
-            return False
-
-        # Check if it's already year-only format (YYYY) - keep it as-is
-        if date.is_year_only(self._d):
-            return True  # Year only is valid, keep as-is
-
-        # Try full date formats only (with day, month, and year)
-        full_date_formats = ['%Y/%m/%d', '%d/%m/%Y', '%Y.%m.%d', '%d.%m.%Y', 
-                             '%Y-%m-%d', '%d-%m-%Y', '%d. %m. %Y']
-        for fmt in full_date_formats:
-            try:
-                datetime_obj = datetime.strptime(self._d, fmt)
-                # Normalize to 'YYYY-MM-DD'
-                self._d = datetime_obj.strftime('%Y-%m-%d')
-                return True
-            except ValueError:
-                continue
-        
-        # If not a full date, try to extract year from partial formats
-        partial_formats = [('%Y-%m', '%Y'), ('%m-%Y', '%Y'), 
-                          ('%Y/%m', '%Y'), ('%m/%Y', '%Y'), 
-                          ('%Y.%m', '%Y'), ('%m.%Y', '%Y')]
-        for parse_fmt, output_fmt in partial_formats:
-            try:
-                datetime_obj = datetime.strptime(self._d, parse_fmt)
-                # Extract only the year
-                self._d = datetime_obj.strftime('%Y')
-                return True
-            except ValueError:
-                continue
-        
-        _logger.warning(f"Error converting [{self._d}] to date.")
         return False
 
     def parse_hybrid(self) -> bool:
@@ -263,16 +169,14 @@ class updater:
     ret_invalid_meta = 4
     ret_empty_meta = 4
 
-    def __init__(self, dspace_be, from_mtd_fields: list, to_mtd_field: list, dry_run: bool = False, fix_date_mode: bool = False):
+    def __init__(self, dspace_be, from_mtd_fields: list, to_mtd_field: list, dry_run: bool = False):
         self._dspace_be = dspace_be
         self._from_mtd_fields = from_mtd_fields
         self._to_mtd_field = to_mtd_field
         self._dry_run = dry_run
-        self._fix_date_mode = fix_date_mode
         self._info = {
             "valid": [],
             "valid_year_only": [],
-            "null_values": [],
             "multiple": set(),
             "invalid_date": [],
             "invalid_date_all": set(),
@@ -307,8 +211,8 @@ class updater:
             # If there is more than one value, get only the first one
             meta_val = date(meta_key[0]["value"])
             # Convert date if necessary
-            if not meta_val.is_valid():
-                if not meta_val.parse():
+            if not meta_val.is_valid_hybrid():
+                if not meta_val.parse_hybrid():
                     self._info["invalid_date_all"].add(meta_val.input)
                     continue
             return meta_val, id_str
@@ -372,37 +276,6 @@ class updater:
 
         return self._perform_update(item, date_val, uuid, id_str)
 
-    def update_existing_metadata_relaxed(self, item: dict, date_str: str, force: bool = False) -> int:
-        """Update existing metadata with relaxed date format rules (for --fix-date-format mode)."""
-        uuid = item['uuid']
-        id_str = f"Item [{uuid}]: [{self._to_mtd_field}]"
-        
-        # Check for null/empty values - keep them untouched
-        if date_str is None or date_str.strip() == "":
-            self._info["null_values"].append((uuid, date_str))
-            _logger.info(f"{id_str}: null/empty value - keeping as-is")
-            return updater.ret_already_ok
-        
-        date_val = date(date_str)
-        if not force:
-            if date_val.is_valid_relaxed():
-                # Check if it's year-only format
-                if date.is_year_only(date_str):
-                    self._info["valid_year_only"].append((uuid, date_val.input))
-                    _logger.info(f"{id_str}: year-only format [{date_str}] - keeping as-is")
-                else:
-                    self._info["valid"].append((uuid, date_val.input))
-                return updater.ret_already_ok
-
-            parsed_ok = date_val.parse_relaxed()
-            if parsed_ok is False:
-                _logger.error(f"{id_str}: cannot convert [{date_val.input}] to date - ANOMALY")
-                self._info["invalid_date"].append((uuid, date_val.input))
-                self._info["anomalies"].append((uuid, date_val.input, "Cannot parse date format"))
-                return updater.ret_invalid_meta
-
-        return self._perform_update(item, date_val, uuid, id_str)
-
     def add_new_metadata(self, item) -> int:
         uuid = item['uuid']
 
@@ -439,7 +312,7 @@ class updater:
                     for i in range(len(date_meta)):
                         if len(val) == 0:
                             date_val = date(date_meta[i]["value"])
-                            if date_val.is_valid() or date_val.parse():
+                            if date_val.is_valid_hybrid() or date_val.parse_hybrid():
                                 val = date_val.value
                                 continue
                         if val == '' and i == len(date_meta) - 1:
@@ -546,7 +419,7 @@ if __name__ == '__main__':
     dspace_be = dspace.rest(endpoint, user, password, True)
 
     upd = updater(dspace_be, args.from_mtd_field, args.to_mtd_field, 
-                  dry_run=args.dry_run, fix_date_mode=args.fix_date_format)
+                  dry_run=args.dry_run)
 
     stats = additional_stats()
 
