@@ -1,4 +1,5 @@
 import logging
+import re
 from ._utils import read_json, serialize, deserialize, time_method, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.item")
@@ -530,7 +531,38 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         f"No version date found for item UUID {item_uuid} in any of the configured fields: {date_fields_to_try}. Skipping version import for this item.")
                     continue
 
-                version_date_sql = f"TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD')"
+                year_pattern = r'^\d{4}$'
+                year_month_pattern = r'^\d{4}-\d{2}$'
+                full_date_pattern = r'^\d{4}-\d{2}-\d{2}$'
+
+                if re.match(full_date_pattern, version_date_issued):
+                    # Exact match, no normalization
+                    normalized_date = version_date_issued
+
+                elif re.match(year_month_pattern, version_date_issued):
+                    # YYYY-MM → YYYY-MM-01
+                    normalized_date = f"{version_date_issued}-01"
+                    _logger.info(
+                        f"Date for item UUID {item_uuid} only had year-month '{version_date_issued}'. "
+                        f"Normalized to {normalized_date}."
+                    )
+
+                elif re.match(year_pattern, version_date_issued):
+                    # YYYY → YYYY-01-01
+                    normalized_date = f"{version_date_issued}-01-01"
+                    _logger.info(
+                        f"Date for item UUID {item_uuid} only had year '{version_date_issued}'. "
+                        f"Normalized to {normalized_date}."
+                    )
+
+                else:
+                    _logger.error(
+                        f"Invalid date format for item UUID {item_uuid}: '{version_date_issued}'. "
+                        "Expected YYYY, YYYY-MM, or YYYY-MM-DD. Skipping version import."
+                    )
+                    continue
+
+                version_date_sql = f"TO_TIMESTAMP('{normalized_date}', 'YYYY-MM-DD')"
 
                 db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
                             f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
