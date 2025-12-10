@@ -1,7 +1,14 @@
 import logging
+import re
+from datetime import datetime
 from ._utils import read_json, serialize, deserialize, time_method, progress_bar, log_before_import, log_after_import
 
 _logger = logging.getLogger("pump.item")
+
+# Pre-compiled regex patterns for date validation
+YEAR_PATTERN = re.compile(r'^\d{4}$')
+YEAR_MONTH_PATTERN = re.compile(r'^\d{4}-\d{2}$')
+FULL_DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
 class items:
@@ -329,8 +336,12 @@ class items:
 
             try:
                 resp = dspace.put_item(params, data)
-                self._id2uuid[str(i_id)] = resp['id']
-                self._imported["items"] += 1
+                if resp is None:
+                    _logger.error(
+                        f'put_item: [{i_id}] failed - server returned None (likely HTTP 500 errors)')
+                else:
+                    self._id2uuid[str(i_id)] = resp['id']
+                    self._imported["items"] += 1
             except Exception as e:
                 _logger.error(f'put_item: [{i_id}] failed [{str(e)}]')
 
@@ -408,6 +419,14 @@ class items:
         self._done = data["done"]
         self._versions = data["versions"]
         self._migrated_versions = data.get("migrated_versions", [])
+
+    def _validate_date_semantic(self, date_str, date_format):
+        """Validate that a date string is semantically valid (valid month/day values)."""
+        try:
+            datetime.strptime(date_str, date_format)
+            return True
+        except ValueError:
+            return False
 
     def _migrate_versions(self, env, db7, db5_dspace, metadatas):
         _logger.info(
@@ -530,7 +549,88 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         f"No version date found for item UUID {item_uuid} in any of the configured fields: {date_fields_to_try}. Skipping version import for this item.")
                     continue
 
-                version_date_sql = f"TO_TIMESTAMP('{version_date_issued}', 'YYYY-MM-DD')"
+                # Strip whitespace that might be present in database fields
+                version_date_issued = version_date_issued.strip()
+
+                if FULL_DATE_PATTERN.match(version_date_issued):
+                    # Validate semantic correctness (valid month/day values)
+                    if self._validate_date_semantic(version_date_issued, '%Y-%m-%d'):
+                        normalized_date = version_date_issued
+                    else:
+                        _logger.error(
+                            f"Invalid date values for item UUID {item_uuid}: '{version_date_issued}'. "
+                            "Date has invalid month or day values. Skipping version import."
+                        )
+                        continue
+
+                elif YEAR_MONTH_PATTERN.match(version_date_issued):
+                    # Extract year and month for explicit validation
+                    year, month = version_date_issued.split('-')
+                    try:
+                        month_int = int(month)
+                        if not (1 <= month_int <= 12):
+                            _logger.error(
+                                f"Invalid month in date for item UUID {item_uuid}: '{version_date_issued}'. "
+                                f"Month '{month}' must be 01-12. Skipping version import."
+                            )
+                            continue
+
+                        # Double-check with datetime validation for robustness
+                        if not self._validate_date_semantic(version_date_issued, '%Y-%m'):
+                            _logger.error(
+                                f"Invalid date values for item UUID {item_uuid}: '{version_date_issued}'. "
+                                "Date validation failed. Skipping version import."
+                            )
+                            continue
+
+                        # YYYY-MM → YYYY-MM-01
+                        normalized_date = f"{version_date_issued}-01"
+                        _logger.info(
+                            f"Date for item UUID {item_uuid} only had year-month '{version_date_issued}'. "
+                            f"Normalized to {normalized_date}."
+                        )
+                    except ValueError:
+                        _logger.error(
+                            f"Invalid month format for item UUID {item_uuid}: '{version_date_issued}'. "
+                            "Month must be numeric. Skipping version import."
+                        )
+                        continue
+
+                elif YEAR_PATTERN.match(version_date_issued):
+                    # Year validation - check for reasonable year range (e.g., 1000-9999)
+                    try:
+                        year_int = int(version_date_issued)
+                        if not (1000 <= year_int <= 9999):
+                            _logger.error(
+                                f"Invalid year in date for item UUID {item_uuid}: '{version_date_issued}'. "
+                                "Year must be between 1000 and 9999. Skipping version import."
+                            )
+                            continue
+                        # YYYY → YYYY-01-01
+                        normalized_date = f"{version_date_issued}-01-01"
+                        _logger.info(
+                            f"Date for item UUID {item_uuid} only had year '{version_date_issued}'. "
+                            f"Normalized to {normalized_date}."
+                        )
+                    except ValueError:
+                        _logger.error(
+                            f"Invalid year format for item UUID {item_uuid}: '{version_date_issued}'. "
+                            "Year must be numeric. Skipping version import."
+                        )
+                        continue
+
+                else:
+                    _logger.error(
+                        f"Invalid date format for item UUID {item_uuid}: '{version_date_issued}'. "
+                        "Expected YYYY, YYYY-MM, or YYYY-MM-DD. Skipping version import."
+                    )
+                    continue
+
+                # Use safer SQL construction with validated date parameter
+                # normalized_date is already validated by regex patterns and datetime.strptime()
+                # Additional escaping for SQL safety (escape single quotes by doubling them)
+                safe_normalized_date = normalized_date.replace("'", "''")
+                version_date_sql = f"TO_TIMESTAMP('{safe_normalized_date}', 'YYYY-MM-DD')"
 
                 db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
                             f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
