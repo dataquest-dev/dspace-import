@@ -65,7 +65,7 @@ Configure items to skip during migration in the `"ignore"` section of `project_s
 
 - **Missing license icons**: Add license labels to `"missing-icons"` array to ignore missing icon files during license import
   ```python
-  "missing-icons": ["Inf","OSI","ND"]
+  "missing-icons": ["Inf", "OSI", "ND"]
   ```
 
 - **Empty persons**: Add person IDs to `"epersons"` array to ignore empty/invalid person records

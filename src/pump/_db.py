@@ -114,9 +114,9 @@ class db:
                 if attempt == max_retries - 1:
                     _logger.warning(
                         f"Database operation failed after {max_retries} attempts: {e}")
-                if attempt == max_retries - 1:
                     raise
-                time.sleep(retry_delay * (2 ** attempt))
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (2 ** attempt))
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
 

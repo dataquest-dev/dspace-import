@@ -625,16 +625,18 @@ class rest:
             pass
 
         # Provide detailed error information with sanitized content
-        def sanitize_log_content(content, max_length=200):
-            """Sanitize content for logging to prevent log injection."""
-            if not content:
-                return "No content"
-            # Convert to string and limit length
-            sanitized = str(content)[:max_length]
-            # Remove/replace potentially dangerous characters for log injection
-            sanitized = sanitized.replace('\n', '\\n').replace(
-                '\r', '\\r').replace('\t', '\\t')
-            return sanitized
+
+    # --- Module-level utility for log sanitization ---
+    def sanitize_log_content(content, max_length=200):
+        """Sanitize content for logging to prevent log injection."""
+        if not content:
+            return "No content"
+        # Convert to string and limit length
+        sanitized = str(content)[:max_length]
+        # Remove/replace potentially dangerous characters for log injection
+        sanitized = sanitized.replace('\n', '\\n').replace(
+            '\r', '\\r').replace('\t', '\\t')
+        return sanitized
 
         if last_response:
             status_code = getattr(last_response, 'status_code', 'Unknown')
