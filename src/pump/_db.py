@@ -15,8 +15,6 @@ class conn:
         self.user = env["user"]
         self.port = env.get("port", 5432)
         self.password = env["password"]
-        # Flag for SSH tunneled connections
-        self.ssh_tunnel = env.get("ssh_tunnel", False)
         self._conn = None
         self._cursor = None
 
@@ -34,11 +32,7 @@ class conn:
                 keepalives_count=DB_KEEPALIVES_COUNT
             )
         except Exception as e:
-            if self.ssh_tunnel:
-                _logger.error(
-                    f"Failed to connect to SSH tunneled database [{self.name}]: {e}")
-            else:
-                _logger.error(f"Failed to connect to database [{self.name}]: {e}")
+            _logger.error(f"Failed to connect to database [{self.name}]: {e}")
             raise
 
     def __del__(self):
