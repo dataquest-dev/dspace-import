@@ -606,12 +606,13 @@ class rest:
                             _logger.debug("Re-authenticating due to auth error")
                             if not self.client.authenticate():
                                 _logger.warning("Re-authentication failed")
+                                break
                         continue
                 else:
                     # Non-retryable error
                     last_response = r
                     _logger.error(
-                        f"✗ POST [{url}] failed with non-retryable HTTP {r.status_code} for [{ascii_data}]: {r.text}")
+                        f"[FAILED] POST [{url}] failed with non-retryable HTTP {r.status_code} for [{ascii_data}]: {r.text}")
                     return None
 
             except Exception as e:

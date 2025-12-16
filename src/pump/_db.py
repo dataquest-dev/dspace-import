@@ -19,7 +19,7 @@ class conn:
         self._cursor = None
 
     def connect(self):
-        if self._conn is not None and not self._conn.closed:
+        if self._conn is not None and not getattr(self._conn, 'closed', True):
             return
 
         import psycopg2  # noqa
@@ -50,17 +50,17 @@ class conn:
         if exc_type is not None:
             _logger.critical(
                 f"An exception of type {exc_type} occurred with message: {exc_value}")
-            if self._conn and not self._conn.closed:
+            if self._conn and not getattr(self._conn, 'closed', True):
                 self._conn.rollback()
             return
-        if self._conn and not self._conn.closed:
+        if self._conn and not getattr(self._conn, 'closed', True):
             self._conn.commit()
 
     def close(self):
         if self._cursor:
             self._cursor.close()
             self._cursor = None
-        if self._conn and not self._conn.closed:
+        if self._conn and not getattr(self._conn, 'closed', True):
             self._conn.close()
             self._conn = None
 
@@ -122,10 +122,12 @@ class db:
                     _logger.warning(
                         f"Database operation failed after {max_retries} attempts: {e}")
                     raise
-                if attempt < max_retries - 1:
-                    self._exponential_backoff_sleep(attempt)
+                
+                # Reconnect immediately if it's a connection-related error
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
+                
+                self._exponential_backoff_sleep(attempt)
 
     def _fetch_all_simple(self, sql: str, col_names: list = None):
         """Simple fetch all without chunking"""
@@ -146,7 +148,7 @@ class db:
             return self._fetch_all_simple(sql, col_names)
 
         # First, get total count for progress tracking
-        count_sql = f"SELECT COUNT(*) FROM ({sql}) AS count_query"
+        count_sql = self._optimize_count_query(sql)
         total_count = self.fetch_one(count_sql)
         if total_count > DB_LARGE_TABLE_THRESHOLD:  # Only log for large tables
             _logger.info(f"Chunking large table: {total_count} rows")
@@ -179,6 +181,49 @@ class db:
 
         return all_results
 
+    def _optimize_count_query(self, sql: str) -> str:
+        """
+        Optimize count query by avoiding subquery when possible.
+        For simple SELECT queries, extract table name and use direct COUNT.
+        Fall back to subquery for complex queries.
+        """
+        import re
+        
+        sql_clean = sql.strip()
+        sql_upper = sql_clean.upper()
+        
+        # Only optimize simple SELECT queries without complex clauses
+        if not sql_upper.startswith('SELECT'):
+            return f"SELECT COUNT(*) FROM ({sql}) AS count_query"
+            
+        # Skip optimization for complex queries
+        complex_keywords = ['UNION', 'GROUP BY', 'HAVING', 'DISTINCT', 'CTE', 'WITH']
+        if any(keyword in sql_upper for keyword in complex_keywords):
+            return f"SELECT COUNT(*) FROM ({sql}) AS count_query"
+        
+        # Try to extract table name from simple SELECT queries
+        # Pattern: SELECT ... FROM table_name [WHERE ...] [ORDER BY ...]
+        from_match = re.search(r'\bFROM\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)', sql_upper)
+        
+        if from_match:
+            table_name = from_match.group(1)
+            
+            # Check if there's a WHERE clause to preserve
+            where_match = re.search(r'\bWHERE\b(.*)(?:\bORDER\s+BY\b|\bLIMIT\b|\bOFFSET\b|$)', sql_upper)
+            
+            if where_match:
+                where_clause = where_match.group(1).strip()
+                # Remove ORDER BY, LIMIT, OFFSET from WHERE clause if they got captured
+                where_clause = re.sub(r'\b(ORDER\s+BY|LIMIT|OFFSET)\b.*$', '', where_clause).strip()
+                if where_clause:
+                    return f"SELECT COUNT(*) FROM {table_name} WHERE {where_clause}"
+            
+            # Simple table query without WHERE
+            return f"SELECT COUNT(*) FROM {table_name}"
+        
+        # Fall back to subquery if we can't parse the table name
+        return f"SELECT COUNT(*) FROM ({sql}) AS count_query"
+
     def fetch_one(self, sql: str):
         max_retries = DB_MAX_RETRIES
         retry_delay = DB_RETRY_BASE_DELAY
@@ -203,9 +248,12 @@ class db:
                     _logger.warning(
                         f"Database operation failed after {max_retries} attempts: {e}")
                     raise
-                self._exponential_backoff_sleep(attempt)
+                
+                # Reconnect immediately if it's a connection-related error
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
+                
+                self._exponential_backoff_sleep(attempt)
 
     def exe_sql(self, sql_text: str):
         max_retries = DB_MAX_RETRIES
@@ -230,9 +278,12 @@ class db:
                     f"Database exe_sql failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
-                self._exponential_backoff_sleep(attempt)
+                
+                # Reconnect immediately if it's a connection-related error
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
+                
+                self._exponential_backoff_sleep(attempt)
 
     # =============
 
@@ -637,7 +688,7 @@ class differ:
                     _logger.debug(f"{progress} Completed validation of {table_name}")
 
                 except Exception as e:
-                    _logger.error(f"{progress} ✗ Validation failed for {table_name}: {e}")
+                    _logger.error(f"{progress} [FAILED] Validation failed for {table_name}: {e}")
                     continue
 
         _logger.info(f"Validation complete: {current_validation} tables processed")
