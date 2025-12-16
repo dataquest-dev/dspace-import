@@ -688,7 +688,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
 
                 # Use parameterized query to prevent SQL injection
                 # normalized_date is already validated by regex patterns and datetime.strptime()
-                sql = """INSERT INTO public.versionitem(versionitem_id, version_number, version_date, 
+                sql = """INSERT INTO public.versionitem(versionitem_id, version_number, version_date,
                          version_summary, versionhistory_id, eperson_id, item_id) VALUES 
                          (%(versionitem_id)s, %(version_number)s, TO_TIMESTAMP(%(version_date)s, 'YYYY-MM-DD'), 
                          %(version_summary)s, %(versionhistory_id)s, %(eperson_id)s, %(item_id)s)"""
