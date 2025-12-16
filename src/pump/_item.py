@@ -452,6 +452,14 @@ class items:
         if month_abbr_lower not in month_abbr_to_num:
             return None
 
+        # Validate day is in the range 1-31 before zero-padding
+        try:
+            day_int = int(day)
+        except ValueError:
+            return None
+        if not (1 <= day_int <= 31):
+            return None
+
         # Pad day with leading zero if needed
         day = day.zfill(2)
         month_num = month_abbr_to_num[month_abbr_lower]
@@ -686,12 +694,12 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         )
                         continue
 
-                # Use parameterized query to prevent SQL injection
-                # normalized_date is already validated by regex patterns and datetime.strptime()
+                # Use parameterized query to prevent SQL injection (primary security measure),
+                # regardless of input validation. normalized_date is also validated by regex patterns and datetime.strptime().
                 sql = """INSERT INTO public.versionitem(versionitem_id, version_number, version_date,
-                         version_summary, versionhistory_id, eperson_id, item_id) VALUES 
-                         (%(versionitem_id)s, %(version_number)s, TO_TIMESTAMP(%(version_date)s, 'YYYY-MM-DD'), 
-                         %(version_summary)s, %(versionhistory_id)s, %(eperson_id)s, %(item_id)s)"""
+                                                 version_summary, versionhistory_id, eperson_id, item_id) VALUES 
+                                                 (%(versionitem_id)s, %(version_number)s, TO_TIMESTAMP(%(version_date)s, 'YYYY-MM-DD'), 
+                                                 %(version_summary)s, %(versionhistory_id)s, %(eperson_id)s, %(item_id)s)"""
                 
                 params = {
                     'versionitem_id': versionitem_new_id,
