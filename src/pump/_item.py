@@ -422,7 +422,7 @@ class items:
         self._versions = data["versions"]
         self._migrated_versions = data.get("migrated_versions", [])
 
-    def _validate_date_semantic(self, date_str, date_format):
+    def _is_valid_date(self, date_str, date_format):
         """Validate that a date string is semantically valid (valid month/day values)."""
         try:
             datetime.strptime(date_str, date_format)
@@ -431,7 +431,12 @@ class items:
             return False
 
     def _parse_day_month_year_format(self, date_str):
-        """Parse dates like '15 Mar. 1993' or '26 Jan. 1990' and convert to YYYY-MM-DD format."""
+        """
+        Parse dates like '15 Mar. 1993' or '26 Jan. 1990' and convert to YYYY-MM-DD format.
+        Returns:
+            str: Normalized date string in YYYY-MM-DD format if parsing succeeds.
+            None: If parsing fails.
+        """
         month_abbr_to_num = {
             'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
             'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
@@ -454,7 +459,7 @@ class items:
         normalized_date = f"{year}-{month_num}-{day}"
 
         # Validate the constructed date
-        if self._validate_date_semantic(normalized_date, '%Y-%m-%d'):
+        if self._is_valid_date(normalized_date, '%Y-%m-%d'):
             return normalized_date
         else:
             return None
@@ -600,7 +605,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
 
                 if FULL_DATE_PATTERN.match(version_date_issued):
                     # Validate semantic correctness (valid month/day values)
-                    if self._validate_date_semantic(version_date_issued, '%Y-%m-%d'):
+                    if self._is_valid_date(version_date_issued, '%Y-%m-%d'):
                         normalized_date = version_date_issued
                     else:
                         _logger.error(
@@ -622,7 +627,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                             continue
 
                         # Double-check with datetime validation for robustness
-                        if not self._validate_date_semantic(version_date_issued, '%Y-%m'):
+                        if not self._is_valid_date(version_date_issued, '%Y-%m'):
                             _logger.error(
                                 f"Invalid date values for item UUID {item_uuid}: '{version_date_issued}'. "
                                 "Date validation failed. Skipping version import."
@@ -677,20 +682,28 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                     else:
                         _logger.error(
                             f"Invalid date format for item UUID {item_uuid}: '{version_date_issued}'. "
-                            "Expected YYYY, YYYY-MM, YYYY-MM-DD, or 'DD MMM YYYY' format. Skipping version import."
+                            "Expected YYYY, YYYY-MM, YYYY-MM-DD, or 'D[D] MMM YYYY' format. Skipping version import."
                         )
                         continue
 
-                # Use safer SQL construction with validated date parameter
+                # Use parameterized query to prevent SQL injection
                 # normalized_date is already validated by regex patterns and datetime.strptime()
-                # Additional escaping for SQL safety (escape single quotes by doubling them)
-                safe_normalized_date = normalized_date.replace("'", "''")
-                version_date_sql = f"TO_TIMESTAMP('{safe_normalized_date}', 'YYYY-MM-DD')"
-
-                db7.exe_sql(f"INSERT INTO public.versionitem(versionitem_id, version_number, version_date, "
-                            f"version_summary, versionhistory_id, eperson_id, item_id) VALUES "
-                            f"({versionitem_new_id}, {index}, {version_date_sql}, "
-                            f"'', {versionhistory_new_id}, '{admin_uuid}', '{item_uuid}');")
+                sql = """INSERT INTO public.versionitem(versionitem_id, version_number, version_date, 
+                         version_summary, versionhistory_id, eperson_id, item_id) VALUES 
+                         (%(versionitem_id)s, %(version_number)s, TO_TIMESTAMP(%(version_date)s, 'YYYY-MM-DD'), 
+                         %(version_summary)s, %(versionhistory_id)s, %(eperson_id)s, %(item_id)s)"""
+                
+                params = {
+                    'versionitem_id': versionitem_new_id,
+                    'version_number': index,
+                    'version_date': normalized_date,
+                    'version_summary': '',
+                    'versionhistory_id': versionhistory_new_id,
+                    'eperson_id': admin_uuid,
+                    'item_id': item_uuid
+                }
+                
+                db7.exe_sql_params(sql, params)
                 # Update sequence
                 db7.exe_sql(f"SELECT setval('versionitem_seq', {versionitem_new_id})")
                 versionitem_new_id += 1
