@@ -91,6 +91,13 @@ class db:
     def __init__(self, env: dict):
         self._conn = conn(env)
 
+    def _exponential_backoff_sleep(self, attempt: int):
+        """Calculate and perform exponential backoff sleep with max delay limit."""
+        delay = DB_RETRY_BASE_DELAY * (2 ** attempt)
+        # Cap the delay at DB_RETRY_MAX_DELAY to prevent excessive wait times
+        delay = min(delay, DB_RETRY_MAX_DELAY)
+        time.sleep(delay)
+
     # =============
 
     def fetch_all(self, sql: str, col_names: list = None, chunk_size: int = None):
@@ -116,7 +123,7 @@ class db:
                         f"Database operation failed after {max_retries} attempts: {e}")
                     raise
                 if attempt < max_retries - 1:
-                    time.sleep(retry_delay * (2 ** attempt))
+                    self._exponential_backoff_sleep(attempt)
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
 
@@ -167,8 +174,6 @@ class db:
                 chunk_num += 1
                 offset += chunk_size
 
-                # Progress tracking without verbose logging
-
                 # Add a small delay to prevent overwhelming the database
                 time.sleep(DB_CHUNK_DELAY)
 
@@ -198,7 +203,7 @@ class db:
                     _logger.warning(
                         f"Database operation failed after {max_retries} attempts: {e}")
                     raise
-                time.sleep(retry_delay * (2 ** attempt))
+                self._exponential_backoff_sleep(attempt)
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
 
@@ -225,7 +230,7 @@ class db:
                     f"Database exe_sql failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
-                time.sleep(retry_delay * (2 ** attempt))
+                self._exponential_backoff_sleep(attempt)
                 if "connection" in str(e).lower() or "abort" in str(e).lower():
                     self._conn.reconnect()
 
