@@ -9,6 +9,8 @@ _logger = logging.getLogger("pump.item")
 YEAR_PATTERN = re.compile(r'^\d{4}$')
 YEAR_MONTH_PATTERN = re.compile(r'^\d{4}-\d{2}$')
 FULL_DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+# Pattern for dates like "15 Mar. 1993" or "26 Jan. 1990"
+DAY_MONTH_YEAR_PATTERN = re.compile(r'^(\d{1,2})\s+([A-Za-z]{3})\.?\s+(\d{4})$')
 
 
 class items:
@@ -428,6 +430,35 @@ class items:
         except ValueError:
             return False
 
+    def _parse_day_month_year_format(self, date_str):
+        """Parse dates like '15 Mar. 1993' or '26 Jan. 1990' and convert to YYYY-MM-DD format."""
+        month_abbr_to_num = {
+            'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+            'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+        }
+
+        match = DAY_MONTH_YEAR_PATTERN.match(date_str)
+        if not match:
+            return None
+
+        day, month_abbr, year = match.groups()
+        month_abbr_lower = month_abbr.lower()
+
+        if month_abbr_lower not in month_abbr_to_num:
+            return None
+
+        # Pad day with leading zero if needed
+        day = day.zfill(2)
+        month_num = month_abbr_to_num[month_abbr_lower]
+
+        normalized_date = f"{year}-{month_num}-{day}"
+
+        # Validate the constructed date
+        if self._validate_date_semantic(normalized_date, '%Y-%m-%d'):
+            return normalized_date
+        else:
+            return None
+
     def _migrate_versions(self, env, db7, db5_dspace, metadatas):
         _logger.info(
             f"Migrating versions [{len(self._id2item or {})}], "
@@ -476,6 +507,21 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             for index, i_handle in enumerate(versions, 1):
                 # Get the handle of the x.th version of the Item
                 i_handle_d = metadatas.versions.get(i_handle, None)
+
+                # If handle not found, try with different protocol (http vs https)
+                if i_handle_d is None:
+                    if i_handle.startswith('https://'):
+                        alternative_handle = i_handle.replace('https://', 'http://')
+                        i_handle_d = metadatas.versions.get(alternative_handle, None)
+                        if i_handle_d is not None:
+                            _logger.debug(
+                                f"Found handle data using http protocol: {alternative_handle}")
+                    elif i_handle.startswith('http://'):
+                        alternative_handle = i_handle.replace('http://', 'https://')
+                        i_handle_d = metadatas.versions.get(alternative_handle, None)
+                        if i_handle_d is not None:
+                            _logger.debug(
+                                f"Found handle data using https protocol: {alternative_handle}")
 
                 # If the item is withdrawn the new version could be stored in our repo or in another. Do import that version
                 # only if the item is stored in our repo.
@@ -620,11 +666,20 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                         continue
 
                 else:
-                    _logger.error(
-                        f"Invalid date format for item UUID {item_uuid}: '{version_date_issued}'. "
-                        "Expected YYYY, YYYY-MM, or YYYY-MM-DD. Skipping version import."
-                    )
-                    continue
+                    # Try to parse date formats like "15 Mar. 1993" or "26 Jan. 1990"
+                    parsed_date = self._parse_day_month_year_format(version_date_issued)
+                    if parsed_date:
+                        normalized_date = parsed_date
+                        _logger.info(
+                            f"Date for item UUID {item_uuid} was in format '{version_date_issued}'. "
+                            f"Normalized to {normalized_date}."
+                        )
+                    else:
+                        _logger.error(
+                            f"Invalid date format for item UUID {item_uuid}: '{version_date_issued}'. "
+                            "Expected YYYY, YYYY-MM, YYYY-MM-DD, or 'DD MMM YYYY' format. Skipping version import."
+                        )
+                        continue
 
                 # Use safer SQL construction with validated date parameter
                 # normalized_date is already validated by regex patterns and datetime.strptime()
@@ -683,7 +738,19 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
             visited.add(cur_item_version)
             versions.append(cur_item_version)
 
-            if cur_item_version not in metadatas.versions:
+            # Check if handle exists in versions, try both http and https protocols
+            handle_data = metadatas.versions.get(cur_item_version, None)
+            if handle_data is None:
+                if cur_item_version.startswith('https://'):
+                    # Try with http instead
+                    alternative_handle = cur_item_version.replace('https://', 'http://')
+                    handle_data = metadatas.versions.get(alternative_handle, None)
+                elif cur_item_version.startswith('http://'):
+                    # Try with https instead
+                    alternative_handle = cur_item_version.replace('http://', 'https://')
+                    handle_data = metadatas.versions.get(alternative_handle, None)
+
+            if handle_data is None:
                 # Check if current item is withdrawn
                 cur_item = self._id2item.get(str(cur_item_id))
                 if cur_item['withdrawn']:
@@ -695,7 +762,7 @@ SELECT setval('versionhistory_seq', {versionhistory_new_id})
                     self._versions["not_imported"].append(cur_item_version)
                 break
 
-            next_item_id = metadatas.versions[cur_item_version]['item_id']
+            next_item_id = handle_data['item_id']
             next_item_version = _get_version(next_item_id)
             if next_item_version in visited:
                 versions.append(next_item_version)
