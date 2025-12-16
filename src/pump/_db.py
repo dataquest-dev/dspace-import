@@ -1,6 +1,10 @@
 import os
 import sys
 import logging
+import time
+
+from ._db_config import *
+
 _logger = logging.getLogger("pump.db")
 
 
@@ -11,17 +15,31 @@ class conn:
         self.user = env["user"]
         self.port = env.get("port", 5432)
         self.password = env["password"]
+        # Flag for SSH tunneled connections
+        self.ssh_tunnel = env.get("ssh_tunnel", False)
         self._conn = None
         self._cursor = None
 
     def connect(self):
-        if self._conn is not None:
+        if self._conn is not None and not self._conn.closed:
             return
 
         import psycopg2  # noqa
-        self._conn = psycopg2.connect(
-            database=self.name, host=self.host, port=self.port, user=self.user, password=self.password)
-        _logger.debug(f"Connection to database [{self.name}] successful!")
+        try:
+            self._conn = psycopg2.connect(
+                database=self.name, host=self.host, port=self.port, user=self.user, password=self.password,
+                connect_timeout=DB_CONNECT_TIMEOUT,
+                keepalives_idle=DB_KEEPALIVES_IDLE,
+                keepalives_interval=DB_KEEPALIVES_INTERVAL,
+                keepalives_count=DB_KEEPALIVES_COUNT
+            )
+        except Exception as e:
+            if self.ssh_tunnel:
+                _logger.error(
+                    f"Failed to connect to SSH tunneled database [{self.name}]: {e}")
+            else:
+                _logger.error(f"Failed to connect to database [{self.name}]: {e}")
+            raise
 
     def __del__(self):
         self.close()
@@ -32,17 +50,43 @@ class conn:
         return self._cursor
 
     def __exit__(self, exc_type, exc_value, traceback):
+        if self._cursor:
+            self._cursor.close()
+            self._cursor = None
         if exc_type is not None:
             _logger.critical(
                 f"An exception of type {exc_type} occurred with message: {exc_value}")
+            if self._conn and not self._conn.closed:
+                self._conn.rollback()
             return
-        self._conn.commit()
-        return self._cursor.close()
+        if self._conn and not self._conn.closed:
+            self._conn.commit()
 
     def close(self):
-        if self._conn:
+        if self._cursor:
+            self._cursor.close()
+            self._cursor = None
+        if self._conn and not self._conn.closed:
             self._conn.close()
             self._conn = None
+
+    def is_connected(self):
+        """Check if the connection is still active"""
+        try:
+            if self._conn is None or self._conn.closed:
+                return False
+            # Test the connection with a simple query
+            with self._conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            return True
+        except Exception:
+            return False
+
+    def reconnect(self):
+        """Force reconnection to the database"""
+        self.close()
+        self.connect()
 
 
 class db:
@@ -55,7 +99,35 @@ class db:
 
     # =============
 
-    def fetch_all(self, sql: str, col_names: list = None):
+    def fetch_all(self, sql: str, col_names: list = None, chunk_size: int = None):
+        """Fetch all results with optional chunking and retry logic"""
+        max_retries = DB_MAX_RETRIES
+        retry_delay = DB_RETRY_BASE_DELAY
+
+        for attempt in range(max_retries):
+            try:
+                if not self._conn.is_connected():
+                    _logger.warning(
+                        f"Connection lost, reconnecting... (attempt {attempt + 1}/{max_retries})")
+                    self._conn.reconnect()
+
+                if chunk_size:
+                    return self._fetch_all_chunked(sql, col_names, chunk_size)
+                else:
+                    return self._fetch_all_simple(sql, col_names)
+
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    _logger.warning(
+                        f"Database operation failed after {max_retries} attempts: {e}")
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(retry_delay * (2 ** attempt))
+                if "connection" in str(e).lower() or "abort" in str(e).lower():
+                    self._conn.reconnect()
+
+    def _fetch_all_simple(self, sql: str, col_names: list = None):
+        """Simple fetch all without chunking"""
         with self._conn as cursor:
             cursor.execute(sql)
             arr = cursor.fetchall()
@@ -63,22 +135,105 @@ class db:
                 col_names += [x[0] for x in cursor.description]
             return arr
 
-    def fetch_one(self, sql: str):
-        with self._conn as cursor:
-            cursor.execute(sql)
-            res = cursor.fetchone()
-            if res is None:
-                return None
+    def _fetch_all_chunked(self, sql: str, col_names: list = None, chunk_size: int = None):
+        """Fetch all results in chunks to avoid memory issues and connection timeouts"""
+        chunk_size = chunk_size or DB_CHUNK_SIZE
 
-            return res[0]
+        # Check if SQL already has LIMIT/OFFSET - if so, use simple fetch
+        sql_upper = sql.upper()
+        if 'LIMIT' in sql_upper or 'OFFSET' in sql_upper:
+            return self._fetch_all_simple(sql, col_names)
+
+        # First, get total count for progress tracking
+        count_sql = f"SELECT COUNT(*) FROM ({sql}) AS count_query"
+        total_count = self.fetch_one(count_sql)
+        if total_count > 50000:  # Only log for large tables
+            _logger.info(f"Chunking large table: {total_count} rows")
+
+        # Fetch data in chunks using LIMIT and OFFSET
+        all_results = []
+        offset = 0
+        chunk_num = 0
+
+        while True:
+            chunk_sql = f"{sql} LIMIT {chunk_size} OFFSET {offset}"
+
+            with self._conn as cursor:
+                cursor.execute(chunk_sql)
+                chunk_results = cursor.fetchall()
+
+                # Get column names from first chunk
+                if col_names is not None and chunk_num == 0:
+                    col_names += [x[0] for x in cursor.description]
+
+                if not chunk_results:
+                    break
+
+                all_results.extend(chunk_results)
+                chunk_num += 1
+                offset += chunk_size
+
+                # Progress tracking without verbose logging
+
+                # Add a small delay to prevent overwhelming the database
+                time.sleep(DB_CHUNK_DELAY)
+
+        return all_results
+
+    def fetch_one(self, sql: str):
+        max_retries = DB_MAX_RETRIES
+        retry_delay = DB_RETRY_BASE_DELAY
+
+        for attempt in range(max_retries):
+            try:
+                # Check connection health before executing
+                if not self._conn.is_connected():
+                    _logger.warning(
+                        f"Connection lost, reconnecting... (attempt {attempt + 1}/{max_retries})")
+                    self._conn.reconnect()
+
+                with self._conn as cursor:
+                    cursor.execute(sql)
+                    res = cursor.fetchone()
+                    if res is None:
+                        return None
+                    return res[0]
+
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    _logger.warning(
+                        f"Database operation failed after {max_retries} attempts: {e}")
+                    raise
+                time.sleep(retry_delay * (2 ** attempt))
+                if "connection" in str(e).lower() or "abort" in str(e).lower():
+                    self._conn.reconnect()
 
     def exe_sql(self, sql_text: str):
-        with self._conn as cursor:
-            sql_lines = [x.strip()
-                         for x in (sql_text or "").splitlines() if x.strip()]
-            for sql in sql_lines:
-                cursor.execute(sql)
-            return
+        max_retries = DB_MAX_RETRIES
+        retry_delay = DB_RETRY_BASE_DELAY
+
+        for attempt in range(max_retries):
+            try:
+                if not self._conn.is_connected():
+                    _logger.warning(
+                        f"Connection lost, reconnecting... (attempt {attempt + 1}/{max_retries})")
+                    self._conn.reconnect()
+
+                with self._conn as cursor:
+                    sql_lines = [x.strip()
+                                 for x in (sql_text or "").splitlines() if x.strip()]
+                    for sql in sql_lines:
+                        cursor.execute(sql)
+                return
+
+            except Exception as e:
+                _logger.warning(
+                    f"Database exe_sql failed (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(retry_delay * (2 ** attempt))
+                if "connection" in str(e).lower() or "abort" in str(e).lower():
+                    self._conn.reconnect()
 
     # =============
 
@@ -304,9 +459,29 @@ class differ:
         sql = sql or f"SELECT * FROM {table_name}"
         cols5 = []
         db5 = db5 or self.raw_db_dspace_5
-        vals5 = db5.fetch_all(sql, col_names=cols5)
-        cols7 = []
-        vals7 = self.raw_db_7.fetch_all(sql, col_names=cols7)
+
+        _logger.debug(f"Fetching data from {table_name}...")
+
+        # Use chunked fetching for large tables (>100k estimated rows)
+        # Check estimated row count first
+        try:
+            count_sql = f"SELECT COUNT(*) FROM {table_name}"
+            row_count = db5.fetch_one(count_sql)
+            use_chunking = row_count and row_count > DB_LARGE_TABLE_THRESHOLD
+            chunk_size = DB_CHUNK_SIZE if use_chunking else None
+
+            if use_chunking:
+                _logger.info(
+                    f"Large table {table_name}: {row_count} rows, using chunking")
+
+            vals5 = db5.fetch_all(sql, col_names=cols5, chunk_size=chunk_size)
+            cols7 = []
+            vals7 = self.raw_db_7.fetch_all(sql, col_names=cols7, chunk_size=chunk_size)
+
+        except Exception as e:
+            _logger.error(f"Error fetching data from {table_name}: {e}")
+            raise
+
         return cols5, vals5, cols7, vals7
 
     def _filter_vals(self, vals, col_names, only_names):
@@ -414,30 +589,56 @@ class differ:
         self._cmp_values(table_name, vals5, only_in_5, vals7, only_in_7, False)
 
     def validate(self, to_validate):
+        total_validations = sum(len(valid_defs) for valid_defs in to_validate)
+        current_validation = 0
+
+        _logger.info(f"Starting validation of {total_validations} table definitions...")
+
         for valid_defs in to_validate:
             for table_name, defin in valid_defs:
-                _logger.info("=" * 10 + f" Validating {table_name} " + "=" * 10)
+                current_validation += 1
+                progress = f"[{current_validation}/{total_validations}]"
 
-                db5_name = defin.get("db", "db_dspace_5")
-                db5 = self.raw_db_dspace_5 if db5_name == "db_dspace_5" else self.raw_db_utilities_5
+                _logger.info(f"{progress} Validating {table_name}")
 
-                cmp = defin.get("compare", None)
-                if cmp is not None:
-                    self.diff_table_cmp_cols(db5, table_name, cmp)
+                try:
+                    db5_name = defin.get("db", "db_dspace_5")
+                    db5 = self.raw_db_dspace_5 if db5_name == "db_dspace_5" else self.raw_db_utilities_5
 
-                cmp = defin.get("nonnull", None)
-                if cmp is not None:
-                    self.diff_table_cmp_len(db5, table_name, cmp)
+                    cmp = defin.get("compare", None)
+                    if cmp is not None:
+                        _logger.debug(f"{progress} Comparing columns for {table_name}...")
+                        self.diff_table_cmp_cols(db5, table_name, cmp)
 
-                # compare only len
-                if not defin:
-                    self.diff_table_cmp_len(db5, table_name)
+                    cmp = defin.get("nonnull", None)
+                    if cmp is not None:
+                        _logger.debug(
+                            f"{progress} Checking non-null constraints for {table_name}...")
+                        self.diff_table_cmp_len(db5, table_name, cmp)
 
-                cmp = defin.get("len", None)
-                if cmp is not None:
-                    self.diff_table_cmp_len(db5, table_name, None, True, cmp["sql"])
+                    # compare only len
+                    if not defin:
+                        _logger.debug(
+                            f"{progress} Comparing table length for {table_name}...")
+                        self.diff_table_cmp_len(db5, table_name)
 
-                cmp = defin.get("sql", None)
-                if cmp is not None:
-                    self.diff_table_sql(
-                        db5, table_name, cmp["5"], cmp["7"], cmp["compare"], cmp.get("process", None))
+                    cmp = defin.get("len", None)
+                    if cmp is not None:
+                        _logger.debug(
+                            f"{progress} Comparing custom length query for {table_name}...")
+                        self.diff_table_cmp_len(db5, table_name, None, True, cmp["sql"])
+
+                    cmp = defin.get("sql", None)
+                    if cmp is not None:
+                        _logger.debug(
+                            f"{progress} Running custom SQL comparison for {table_name}...")
+                        self.diff_table_sql(
+                            db5, table_name, cmp["5"], cmp["7"], cmp["compare"], cmp.get("process", None))
+
+                    _logger.debug(f"{progress} Completed validation of {table_name}")
+
+                except Exception as e:
+                    _logger.error(f"{progress} ✗ Validation failed for {table_name}: {e}")
+                    continue
+
+        _logger.info(f"Validation complete: {current_validation} tables processed")

@@ -95,6 +95,22 @@ Add the following to your `project_settings.py`:
 - **NOTE:** database must be up to date (`dspace database migrate force` must be called in the `dspace/bin`)
 - **NOTE:** dspace server must be running
 
+## Database Connection Improvements
+
+For long-running imports, the system includes automatic connection management:
+
+- **Connection reliability**: TCP keepalive prevents timeouts, automatic reconnection on failures
+- **Large dataset handling**: Tables >100k rows processed in 50k row chunks to prevent memory issues  
+- **Retry logic**: All operations retry up to 3 times with exponential backoff
+- **SSH tunnel support**: Secure remote database connections via SSH tunneling
+
+### Configuration
+
+Database settings in `src/pump/_db_config.py`:
+- `DB_CHUNK_SIZE = 50000` - Rows per chunk for large tables
+- `DB_MAX_RETRIES = 3` - Retry attempts on failure
+- `DB_CONNECT_TIMEOUT = 30` - Connection timeout in seconds
+
 ## !!!Migration Notes:!!!
 - The values of table attributes that describe the last modification time of DSpace objects (for example attribute `last_modified` in table `Item`) have a value that represents the time when that object was migrated and not the value from the migrated database dump.
 - If you don't have valid and complete data, not all data will be imported.
