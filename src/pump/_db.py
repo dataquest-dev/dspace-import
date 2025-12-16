@@ -141,7 +141,7 @@ class db:
         # First, get total count for progress tracking
         count_sql = f"SELECT COUNT(*) FROM ({sql}) AS count_query"
         total_count = self.fetch_one(count_sql)
-        if total_count > 50000:  # Only log for large tables
+        if total_count > DB_LARGE_TABLE_THRESHOLD:  # Only log for large tables
             _logger.info(f"Chunking large table: {total_count} rows")
 
         # Fetch data in chunks using LIMIT and OFFSET

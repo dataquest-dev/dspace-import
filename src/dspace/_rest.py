@@ -574,7 +574,12 @@ class rest:
                     self._handle_circuit_breaker(r.status_code)
                     retry_delay = HTTP_RETRY_DELAY * (HTTP_RETRY_BACKOFF ** attempt)
 
-                    if attempt == 0 or attempt == HTTP_MAX_RETRIES - 1:
+                    if attempt == HTTP_MAX_RETRIES - 1:
+                        # Last attempt - no retry will happen
+                        _logger.warning(
+                            f"POST [{url}] HTTP {r.status_code} (attempt {attempt + 1}/{HTTP_MAX_RETRIES}) - final attempt")
+                    elif attempt == 0:
+                        # First attempt - log with retry info
                         _logger.warning(
                             f"POST [{url}] HTTP {r.status_code} (attempt {attempt + 1}/{HTTP_MAX_RETRIES}) - retrying in {retry_delay}s")
                     else:
@@ -619,17 +624,30 @@ class rest:
         except Exception:
             pass
 
-        # Provide detailed error information
+        # Provide detailed error information with sanitized content
+        def sanitize_log_content(content, max_length=200):
+            """Sanitize content for logging to prevent log injection."""
+            if not content:
+                return "No content"
+            # Convert to string and limit length
+            sanitized = str(content)[:max_length]
+            # Remove/replace potentially dangerous characters for log injection
+            sanitized = sanitized.replace('\n', '\\n').replace(
+                '\r', '\\r').replace('\t', '\\t')
+            return sanitized
+
         if last_response:
             status_code = getattr(last_response, 'status_code', 'Unknown')
-            error_detail = f"HTTP {status_code}"
             if hasattr(last_response, 'text'):
-                error_text = last_response.text[:200] if last_response.text else "No response text"
-                error_detail += f": {error_text}"
+                error_text = sanitize_log_content(last_response.text)
+                error_detail = f"HTTP {status_code}: {error_text}"
+            else:
+                error_detail = f"HTTP {status_code}: No response text"
         else:
-            error_detail = str(last_exception) if last_exception else "Unknown error"
+            error_detail = sanitize_log_content(
+                str(last_exception) if last_exception else "Unknown error")
 
-        msg = f'POST [{url}] for [{ascii_data}] failed after {HTTP_MAX_RETRIES} attempts. Final error: {error_detail}'
+        msg = f"POST [{url}] for [{ascii_data}] failed after {HTTP_MAX_RETRIES} attempts. Final error: {error_detail}"
         _logger.error(msg)
         return None
 
